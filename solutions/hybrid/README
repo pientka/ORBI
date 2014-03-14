@@ -1,0 +1,37 @@
+The files run in Coq V8.4pl2.  (Coq 8.4 is the most recent version.)
+
+--------------------
+The Hybrid Libraries
+--------------------
+
+The Coq version of Hybrid is implemented as the following files, which
+are used in all of the examples that follow, and must be compiled in
+the order they appear.
+ 	
+- Hybrid.v: the main library
+- sl.v: specification logic used in the benchmark problems (fragment
+  of 2nd-order minimal logic)
+
+-------------------
+The Benchmark Files
+-------------------
+
+Theses Coq files implement the benchmarks as described in Section 6
+and Appendix B of:
+Amy Felty, Alberto Momigliano, and Brigitte Pientka, The Next 700
+Challenge Problems for Reasoning with Higher-Order Abstract Syntax
+Representations: Part 2---A Survey, submitted for publication, 2014.
+
+Sections 6.1, 6.3, and B.1 (R and G versions)
+- EqualUntypedR.v
+- EqualUntypedG.v
+
+Section 6.2 (R and G versions)
+- EqualPolyR.v
+- EqualPolyG.v
+
+Section 6.5
+- TypingSimple.v
+
+Sections 6.6 and B.2 (R version)
+- ParRedR.v
