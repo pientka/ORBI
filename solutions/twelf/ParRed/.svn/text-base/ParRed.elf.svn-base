@@ -1,0 +1,69 @@
+% The substitution property - Illustrating the need for exchange
+% Author: Brigitte Pientka
+
+% ---------------------------------------------------------------------------
+% Definition of lambda-terms
+tm: type.                         %name tm M x.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+% Definition of types and expressions
+tp: type.  %name tp T.
+arr: tp -> tp -> tp.
+i: tp.
+
+% ---------------------------------------------------------------------------
+% Parallel reduction
+pr : tm -> tm -> type.
+
+pr_l : ({x:tm}pr x x -> pr (M x) (N x))
+       -> pr (lam M) (lam N).
+pr_b : ({x:tm} pr x x -> pr (M x) (M' x)) 
+          -> pr N N'
+          -> pr (app (lam M) N) (M' N').
+pr_a : pr M M' -> pr N N'
+       -> pr (app M N) (app M' N').
+
+% ---------------------------------------------------------------------------
+% Context schemas 
+%block rCtx : block {x:tm}{pr_v: pr x x}.
+
+% ---------------------------------------------------------------------------
+% Typing judgment
+oft: tm -> tp -> type. %name oft H.
+
+of_lam: ({x:tm}oft x T1 -> oft (M x) T2)
+	-> oft (lam M) (arr T1 T2).
+	  
+of_app: oft M1 (arr T2 T) -> oft M2 T2
+       -> oft (app M1 M2) T.
+
+% ---------------------------------------------------------------------------
+% Context schemas 
+%block tCtx : some {t:tp} block {x:tm}{of_v: oft x t}.
+
+% ---------------------------------------------------------------------------
+% Type preservation for parallel reduction
+tps : pr M N -> oft M A -> oft N A -> type.
+%mode tps +R +D -F.
+
+tp_b :  tps (pr_b R1 R2) (of_app (of_lam D1)   D2) (F1 _ F2)
+	  <- ({x:tm}{of_v: oft x _}{pr_v:pr x x} 
+		tps pr_v of_v of_v -> tps (R1 x pr_v) (D1 x of_v) (F1 x of_v)) 
+	  <- tps R2 D2 F2.
+
+tp_l  : tps (pr_l R) (of_lam D) (of_lam F)
+	 <- ({x:tm}{of_v: oft x _}{pr_v:pr x x} 
+	       tps pr_v of_v of_v -> tps (R x pr_v) (D x of_v) (F x of_v)).
+
+tp_a : tps (pr_a R1 R2) (of_app D1 D2) (of_app F1 F2)
+	<- tps R1 D1 F1
+	<- tps R2 D2 F2.
+
+% ---------------------------------------------------------------------------
+% Generalized context schemas 
+%block xrtG_tpv : some {t:tp} block {x:tm}{of_v: oft x t}{pr_v: pr x x}
+		                 {tp_v:tps pr_v of_v of_v}.
+
+%worlds (xrtG_tpv) (tps R D F).
+%total R (tps R D F).

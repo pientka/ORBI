@@ -1,0 +1,89 @@
+% The substitution property - Illustrating the need for exchange
+% Author: Brigitte Pientka
+
+% ---------------------------------------------------------------------------
+% Definition of lambda-terms
+tm: type.                         %name tm M x.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+% Definition of types and expressions
+tp: type.  %name tp T.
+arr: tp -> tp -> tp.
+nat: tp.
+
+% ---------------------------------------------------------------------------
+% Parallel reduction
+pr : tm -> tm -> type.
+
+pr_l : ({x:tm}pr x x -> pr (M x) (N x))
+       -> pr (lam M) (lam N).
+pr_b : ({x:tm} pr x x -> pr (M x) (M' x)) 
+          -> pr N N'
+          -> pr (app (lam M) N) (M' N').
+pr_a : pr M M' -> pr N N'
+       -> pr (app M N) (app M' N').
+
+% ---------------------------------------------------------------------------
+% Context schemas 
+schema rCtx = block x:tm, pr_v: pr x x;
+
+% ---------------------------------------------------------------------------
+% Typing judgment
+oft: tm -> tp -> type. %name oft H. 
+of_lam: ({x:tm}oft x T1 -> oft (M x) T2)
+	-> oft (lam M) (arr T1 T2).
+	  
+of_app: oft M1 (arr T2 T) -> oft M2 T2
+       -> oft (app M1 M2) T.
+
+% ---------------------------------------------------------------------------
+% Context schemas 
+schema tCtx = some [t:tp] block x:tm, of_v: oft x t;
+
+% ---------------------------------------------------------------------------
+% Substitution lemma - for free, direct
+rec subst : (g:tCtx)
+            [g,b: block x:tm, of_v: oft x T . oft (M .. b.1) S]
+	    -> [g. oft (N ..) T] 
+	    -> [g. oft (M .. (N ..)) S] = 
+fn d1 => fn d2 => 
+let [g, b: block x:tm, of_v: oft x T . D1 .. b.1 b.2] = d1 in 
+let [g. D2 ..] = d2 in 
+  [g . D1 .. _ (D2 ..)]
+;
+
+% ---------------------------------------------------------------------------
+% Generalized context schemas 
+schema trCtx = some [t:tp] block x:tm, of_v: oft x t, pr_v: pr x x;
+
+% ---------------------------------------------------------------------------
+% Type preservation for parallel reduction
+rec tps : (g:trCtx)
+            [g . pr (M ..) (N ..)] -> [g. oft (M ..) A] 
+          -> [g. oft (N ..) A] = 
+fn r => fn d => case r of 
+| [g. #p.3 .. ] =>  d
+| [g. pr_b (\x.\pr_v. R1 .. x pr_v)  (R2 .. ) ] => 
+    let [g. of_app (of_lam (\x.\of_v. D1 .. x of_v))   (D2 ..) ] = d in 
+    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x . F1 .. b.1 b.2] = 
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x . R1 .. b.1 b.3]
+	      [g, b . D1 .. b.1 b.2] in 
+    let [g . F2 .. ] = tps [g. R2 ..] [g. D2 ..] in 
+    [g . F1 .. _ (F2 ..)]  % use substitution lemma directly 
+
+| [g. pr_l \x.\pr_v. R .. x pr_v] => 
+    let [g. of_lam \x.\of_v. D .. x of_v] = d in 
+    let [g, b: block x:tm, of_v: oft x T, pr_v: pr x x . F .. b.1 b.2] = 
+        tps [g, b: block x:tm, of_v: oft x _, pr_v: pr x x . R .. b.1 b.3]
+	      [g, b . D .. b.1 b.2] in 
+    [g. of_lam \x.\of_v. F .. x of_v]
+
+| [g. pr_a (R1 ..) (R2 ..) ] => 
+    let [g. of_app (D1 ..) (D2 ..)] = d in 
+    let [g. F1 .. ] = tps [g. R1 ..] [g.D1 ..] in 
+    let [g. F2 .. ] = tps [g. R2 ..] [g.D2 ..] in 
+    [g. of_app (F1 ..) (F2 ..)]
+;
+
+

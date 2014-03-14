@@ -1,0 +1,264 @@
+% Definition of lambda-calculus
+% Author: Brigitte Pientka
+
+tp  : type.  %name tp T a.
+arr : tp -> tp -> tp.
+all : (tp -> tp) -> tp. 
+
+tm: type.
+%name tm M n.
+lam: (tm -> tm) -> tm.
+app: tm -> tm -> tm.
+tlam: (tp  -> tm) -> tm.
+tapp: tm -> tp -> tm.
+
+% ------------------------------------------------------------------------------
+% Declarative Equality for types
+dtp: tp -> tp -> type.   %name dtp AT u.
+dt_al : ({a:tp}dtp a a -> dtp (T a) (S a))
+	-> dtp (all T) (all S).
+dt_arr: dtp T1 T2 -> dtp S1 S2
+	-> dtp (arr T1 S1) (arr T2 S2).
+dt_r: dtp T T.
+dt_t: dtp T R -> dtp R S 
+     -> dtp T S.
+dt_s: dtp S T 
+      -> dtp T S.
+
+
+% Declarative definition of equality
+deq: tm -> tm -> type.
+%name deq D u.
+de_l: deq (lam M) (lam M')
+       <- ({x}deq x x -> deq (M x) (M' x)).
+
+de_a: deq M1 N1 -> deq M2 N2 -> deq (app M1 M2) (app N1 N2).
+
+de_r: deq M M.
+de_t: deq M N
+       <- deq M L
+       <- deq L N.
+
+de_s: deq M N -> deq N M.
+
+de_tl: deq (tlam M) (tlam N)
+	<- ({a}dtp a a -> deq (M a) (N a) ).
+
+de_ta: deq M N -> dtp T S 
+       ->  deq (tapp M T) (tapp N S).
+
+	  
+% ----------------------------------------------------------------- %
+% Algorithmic Equality for types
+atp: tp -> tp -> type.   %name atp AT u.
+at_al : ({a:tp} atp a a -> atp (T a) (S a))
+	-> atp (all T) (all S).
+at_arr: atp T1 T2 -> atp S1 S2
+	-> atp (arr T1 S1) (arr T2 S2).
+
+% Algorithmic definition of equality
+aeq: tm -> tm -> type.
+%name aeq F v.
+ae_l: aeq (lam T) (lam T')
+       <- ({x}aeq x x -> aeq (T x) (T' x)).
+
+ae_a: aeq M1 N1 -> aeq M2 N2 
+    -> aeq (app M1 M2) (app N1 N2).
+
+ae_tl:  ({a:tp} atp a a -> aeq (E a) (F a)) 
+        -> aeq (tlam  E) (tlam F).
+
+ae_ta : aeq E F -> atp T S 
+    -> aeq (tapp E T) (tapp F S).
+
+% ------------------------------------------------------------------------------
+% Reflexivity is admissible in aeq.
+reflTpG: {T}atp T T -> type.
+%mode reflTpG +T -D.
+tr_ar: reflTpG (arr T S) (at_arr D1 D2)
+	<- reflTpG T D1
+	<- reflTpG S D2.
+
+tr_al: reflTpG (all T) (at_al D)
+	<- ({a:tp}{u:atp a a} reflTpG a u -> reflTpG (T a) (D a u)).
+
+%block atpG_r : block {a:tp}{u:atp a a}{r_a: reflTpG a u}.
+%worlds (atpG_r) (reflTpG T D).
+%total T (reflTpG T D).
+
+
+reflTmG: {M}aeq M M -> type.
+%mode reflTmG +M -D.
+r_l: reflTmG (lam M) (ae_l D)
+      <- ({x}{u:aeq x x}reflTmG x u -> reflTmG (M x) (D x u)).
+
+r_a: reflTmG (app M1 M2) (ae_a D1 D2)
+      <- reflTmG M1 D1
+      <- reflTmG M2 D2.
+
+r_tl : reflTmG (tlam M) (ae_tl D)
+	<- ({a:tp}{u:atp a a} reflTpG a  u -> reflTmG (M a) (D a u)).
+
+r_ta : reflTmG (tapp M T) (ae_ta D1 D2)
+	<- reflTmG M D1
+	<- reflTpG T D2.
+
+%block  xaG_r : block {x:tm}{u:aeq x x}{r_x: reflTmG x u}.
+%worlds (xaG_r | atpG_r) (reflTmG T D).
+%total T (reflTmG T D).
+
+
+
+% ------------------------------------------------------------------------------
+% Transitivity is admissible
+transTpG : atp T R -> atp R S -> atp T S -> type.
+%mode transTpG +D +E -F.
+ttr_ar : transTpG (at_arr D1 D2) (at_arr E1 E2) (at_arr F1 F2)
+	  <- transTpG D1 E1 F1
+	  <- transTpG D2 E2 F2.
+
+ttr_al : transTpG (at_al D) (at_al E) (at_al F)
+	  <- ({a:tp}{u:atp a a}{tr_a:reflTpG a u}
+		transTpG u u u -> transTpG (D a u) (E a u) (F a u)).
+
+%block atpG_rt : block {a:tp}{u:atp a a}{r_a: reflTpG a u}
+                   {tr_a: transTpG u u u}.
+%worlds (atpG_rt) (transTpG D E F).
+%total D (transTpG D E F).
+
+
+transTmG: aeq M L -> aeq L N -> aeq M N -> type.
+%mode transTmG +E1 +E2 -E3.
+
+tr_l: transTmG (ae_l E1) (ae_l E2) (ae_l E3)
+       <- ({x}{u:aeq x x} {r_x: reflTmG x u}
+	     transTmG u u u -> transTmG (E1 x u) (E2 x u) (E3 x u)).
+
+tr_a: transTmG (ae_a E2 E1) (ae_a F2 F1) (ae_a G2 G1)
+       <- transTmG E1 F1 G1
+       <- transTmG E2 F2 G2.
+
+tr_tl : transTmG (ae_tl E1) (ae_tl E2) (ae_tl E3)
+	 <- ({a:tp}{u:atp a a}{r_a: reflTpG a u}
+	       transTpG u u u -> transTmG (E1 a u) (E2 a u) (E3 a u) ).
+
+tr_ta : transTmG (ae_ta D1 D2) (ae_ta E1 E2) (ae_ta F1 F2)
+	 <- transTmG D1 E1 F1
+	 <- transTpG D2 E2 F2.
+
+
+%block xaG_rt : block {x:tm}{u:aeq x x}{r_x:reflTmG x u}{t_x: transTmG u u u}.
+%worlds (xaG_rt | atpG_rt) (transTmG E1 E2 E3).
+%total E1  (transTmG E1 E2 E3).
+
+% ------------------------------------------------------------------------------
+% Symmetry for types is admissible
+symTpG: atp T R -> atp R T -> type.
+%mode symTpG +D -F.
+
+tsy_ar: symTpG (at_arr D1 D2) (at_arr E1 E2)
+	 <- symTpG D1 E1
+	 <- symTpG D2 E2.
+
+tsy_al: symTpG (at_al D) (at_al E)
+	 <- ({a}{u:atp a a}{r_a:reflTpG a u}{t_a: transTpG u u u}{s_a: symTpG u u}
+	       symTpG (D a u) (E a u)).
+%block atpG_rts : block {a:tp}{u:atp a a}{r_a:reflTpG a u}{t_a: transTpG u u u}{s_a: symTpG u u}.
+%worlds (atpG_rts) (symTpG E1 E2).
+%total E1  (symTpG E1 E2).
+
+% Symmetry for terms is admissible
+sym: aeq T R -> aeq R T -> type.
+%mode sym +E1 -E2.
+
+sy_l: sym (ae_l E1) (ae_l E2) 
+       <- ({x}{u:aeq x x}{r_x: reflTmG x u}{t_x: transTmG u u u}
+	 sym u u ->  sym (E1 x u) (E2 x u)).
+
+sy_a: sym (ae_a E2 E1) (ae_a F2 F1) 
+       <- sym E1 F1
+       <- sym E2 F2.
+
+sy_tl: sym (ae_tl D) (ae_tl E)
+	<- ({a}{u:atp a a}{r_a: reflTpG a u}{t_a:transTpG u u u}{s_a:symTpG u u}
+	      sym (D a u) (E a u)).
+
+sy_ta: sym (ae_ta D1 D2) (ae_ta E1 E2)
+	<- sym D1 E1
+	<- symTpG D2 E2.
+
+%block xaG_rts : block {x:tm}{u:aeq x x}{r_x:reflTmG x u}{t_x: transTmG u u u}{s_x: sym u u}.
+%worlds (xaG_rts | atpG_rts) (sym E1 E2).
+%total E1  (sym E1 E2).
+
+% ----------------------------------------------------------------- %
+% Correctness:
+
+tceq : dtp T S -> atp T S -> type.
+%mode tceq +E -D.
+tc_ar: tceq (dt_arr E1 E2) (at_arr D1 D2)
+	<- tceq E1 D1
+	<- tceq E2 D2.
+
+tc_al: tceq (dt_al E) (at_al D)
+	<- ({a:tp}{u:atp a a}{r_a: reflTpG a u}{tr_a: transTpG u u u}{sy_a: symTpG u u}
+	     {v:dtp a a} tceq v u -> tceq (E a v) (D a u)).
+tc_r: tceq dt_r E
+       <- reflTpG _ E.
+tc_t: tceq (dt_t E1 E2) D
+       <- tceq E1 D1
+       <- tceq E2 D2
+       <- transTpG D1 D2 D.
+
+tc_s: tceq (dt_s E) F
+       <- tceq E D
+       <- symTpG D F.
+
+%block datpG_rtsc : block {a:tp}{u:atp a a}{r_a: reflTpG a u}
+                   {tr_a: transTpG u u u}{sy_a: symTpG u u}{v:dtp a a}{tc_a: tceq v u}.
+%worlds (datpG_rtsc) (tceq E D).
+%total E (tceq E D).
+
+ceq: deq M N -> aeq M N -> type.
+%mode ceq +E -D.
+c_l: ceq (de_l E) (ae_l D)
+      <- ({x}{u:aeq x x} {r_x: reflTmG x u}	
+	    {t_x: transTmG u u u}{s_x: sym u u}
+	    {v:deq x x} 
+	    ceq v u -> ceq (E x v) (D x u)).
+
+c_a: ceq (de_a F2 F1) (ae_a D2 D1)
+      <- ceq F1 D1
+      <- ceq F2 D2.
+
+c_ta: ceq (de_ta F1 F2) (ae_ta D1 D2)
+      <- ceq F1 D1
+      <- tceq F2 D2.
+
+c_tl: ceq (de_tl E) (ae_tl D)
+      <- ({a}{u:atp a a} {r_a: reflTpG a u}	
+	    {tr_a: transTpG u u u}{sy_a: symTpG  u u}
+	    {v:dtp a a} 
+	    tceq v u -> ceq (E a v) (D a u)).
+
+c_r: ceq de_r E
+      <- reflTmG _ E.
+
+c_t: ceq (de_t D2 D1) E
+      <- ceq D2 E2
+      <- ceq D1 E1
+      <- transTmG E1 E2 E.
+
+c_s: ceq (de_s D) F
+      <- ceq D E
+      <- sym E F.
+
+
+%block daG_rtsc :  block {x:tm}{u:aeq x x}{r_x:reflTmG x u}
+	     {tr_x: transTmG u u u}{sy_x: sym u u}{v:deq x x}
+	     {c_x: ceq v u}.
+
+%worlds (daG_rtsc | datpG_rtsc) (ceq E D).
+
+%total E (ceq E D).
+

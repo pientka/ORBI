@@ -1,0 +1,136 @@
+% Definition of types and expressions
+tp: type.  %name tp T.
+arr: tp -> tp -> tp.
+nat: tp.
+
+term: type. %name term M.
+lam : tp -> (term -> term) -> term.
+app : term -> term -> term.
+
+% Typing judgment
+hastype: term -> tp -> type. %name hastype H.
+
+h_lam: ({x:term}hastype x T1 -> hastype (M x) T2)
+	-> hastype (lam T1 M) (arr T1 T2).
+	  
+h_app: hastype M1 (arr T2 T) -> hastype M2 T2
+       -> hastype (app M1 M2) T.
+
+% Equality predicate
+
+eq: tp -> tp -> type.
+e_arr:  eq T1 S1 -> eq T2 S2
+	-> eq (arr T1 T2) (arr S1 S2).
+
+e_nat: eq nat nat.
+
+
+% Reflexivity is admissible:
+% Theorem: For all types T:tp, eq T T.
+rec refl : {T:[. tp]}[. eq T T] = 
+mlam T => case [. T] of 
+ | [. nat] => [. e_nat] 
+ | [. arr T1 T2] => 
+   let [. D1] = refl [ . T1 ] in 
+   let [. D2] = refl [ . T2 ] in 
+     [. e_arr D1 D2]
+;			 
+
+
+% Uniqueness of typing
+%{Theorem: 
+  If  G |- hastype M T  and G |- hastype M T'  
+  then  equal T T'.
+
+Proof by induction on M.
+}%
+
+
+schema xtG =  some [t:tp] block x:term, _t:hastype x t;
+
+rec unique : {g:xtG}{M:[g. term]} [g. hastype (M ..) T] -> [g. hastype (M ..) T'] 
+	     ->  [. eq T T'] = 
+mlam g => mlam M => fn d => fn f => case [g. M .. ] of 
+| [g. app (M1 .. ) (M2 .. )] => 
+  let [g. h_app (D1 ..) (D2 ..)] = d in 
+  let [g. h_app (F1 ..) (F2 ..)] = f in 
+  let [. e_arr C1 C2] = unique [g] [g . M1 .. ] [g. D1 ..] [g. F1 ..] in    
+    [. C2]  						 
+
+| [g. lam T1 (\x. M .. x)] => 
+  let [g. h_lam (\x.(\u. D .. x u))] = d in 
+  let [g. h_lam (\x.(\u. F .. x u))] = f in 
+  let [. C2] = unique [g,b: block x:term, _t:hastype x _] 
+		      [g,b. (M .. b.1) ] [g,b. D .. b.1 b.2] [g,b. F .. b.1 b.2] in 
+ let [. C1] = refl [ . T1 ] in 
+   [. e_arr C1 C2] 
+
+| [g. #p.1 ..] =>  
+   % #p: l          block a:term. hastype a R 
+   % d : (hastype (#p.1 ..) T)[g]
+   % f : (hastype (#p.1 ..) T')[g]
+
+  let [g. #q.2 ..] = d  in  % d : hastype #p.1 T
+   % #q : block y:term. hastype y S  
+   % #q.2 : hastype (#q.1 ..) S  = d : hastype (#p.1 ..) T
+   %  S = T  #q = #p, S = R
+
+  let [g. #r.2 ..] = f  in  % f : hastype #p.1 T'  
+   % #r : block y:term. hastype y S'  
+   % #r.2 : hastype (#r.1 ..) S'  = f : hastype (#p.1 ..) T'
+   % S' = T' ,  #r=#p  , R = S'
+
+    refl [ . _ ]
+
+;
+
+
+
+% Equality predicate
+equal: tp -> tp -> type.
+e_ref: equal T T.
+
+% induction on M
+rec unique2 : {g:xtG}{M:[g. term]} [g. hastype (M ..) T] -> [g. hastype (M ..) T'] 
+	     ->  [. equal T T'] = 
+mlam g => mlam E => fn d => fn f => case [g. E .. ] of 
+| [g. app (M1 .. ) (M2 .. )] => 
+  let [g. h_app (D1 ..) (D2 ..)] = d in 
+  let [g. h_app (F1 ..) (F2 ..)] = f in 
+  let [. e_ref]  = unique2 [g] [g . M1 .. ] [g. D1 ..] [g. F1 ..] in    
+    [. e_ref]   						 
+
+| [g. lam T1 (\x. M .. x)] => 
+  let [g. h_lam (\x.(\u. D .. x u))] = d in 
+  let [g. h_lam (\x.(\u. F .. x u))] = f in 
+  let [. e_ref] = unique2 [g,b: block x:term, _t:hastype x T1] 
+		      [g,b. (M .. b.1) ] [g,b. D .. b.1 b.2] [g,b. F .. b.1 b.2] in 
+   [. e_ref]  
+
+| [g. #p.1 ..] => 
+  let [g. #q.2 ..] = d  in  % d : hastype #p.1 T
+  let [g. #r.2 ..] = f  in  % f : hastype #p.1 T'
+    [. e_ref] 			  
+
+;
+
+
+% induction on [g. hastype (M ..) T]
+rec unique3 : {g:xtG}[g. hastype (M ..) T] -> [g. hastype (M ..) T'] 
+	     ->  [. equal T T'] = 
+mlam g =>  fn d => fn f => case d of 
+| [g. h_app (D1 ..) (D2 ..)] =>
+  let [g. h_app (F1 ..) (F2 ..)] = f in 
+  let [. e_ref]  = unique3 [g] [g. D1 ..] [g. F1 ..] in    
+    [. e_ref]   						 
+
+| [g. h_lam (\x.(\u. D .. x u))] =>
+  let [g. h_lam (\x.(\u. F .. x u))] = f in 
+  let [. e_ref] = unique3 [g,b: block x:term, _t:hastype x _ ] 
+		       [g,b. D .. b.1 b.2] [g,b. F .. b.1 b.2] in 
+   [. e_ref]  
+
+| [g. #q.2 ..] =>           % d : hastype #p.1 T
+  let [g. #r.2 ..] = f  in  % f : hastype #p.1 T'
+    [. e_ref] 			  
+;

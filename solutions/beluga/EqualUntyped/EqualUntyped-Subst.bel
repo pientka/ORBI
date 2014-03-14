@@ -1,0 +1,46 @@
+% Basic Context Reasoning - Illustrating exchange
+% Author: Brigitte Pientka
+
+% Definition of lambda-terms
+term: type.                         %name term M x.
+app: term -> term -> term.
+lam: (term -> term) -> term.
+
+% ---------------------------------------------------------------------------
+% Algorithmic Equality
+aeq: term -> term -> type.   %name aeq Q u.
+ae_a : aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
+
+ae_l :  ({x : term} aeq x x -> aeq (M x) (N x)) 
+          -> aeq (lam (\x. M x)) (lam (\x. N x)).
+
+
+% ---------------------------------------------------------------------------
+% Context schemas 
+schema aeqCtx = block x:term, ae_v:aeq x x;
+
+% ---------------------------------------------------------------------------
+% Substitution lemma
+rec subst : (g:aeqCtx) 
+            [g, b: block (x:term, ae_v:aeq x x) . aeq (M1 .. b.1) (M2 .. b.1)]
+	    -> [g. aeq (N1 ..) (N2 ..)]  
+	    -> [g. aeq (M1 .. (N1 ..)) (M2 .. (N2 ..)) ] = 
+fn d => fn d' => case d of 
+ | [g, b: block x:term, ae_v:aeq x x . b.2] => d' 
+| [g, b: block x:term, ae_v:aeq x x . #p.2 .. ] => 
+    [g. #p.2 ..]
+
+| [g, b: block x:term, ae_x:aeq x x . ae_l \y.\ae_y. D .. b y  ae_y ] => 
+    let [g . D' .. ] = d' in 
+    let [g, d': block (y:term, ae_y: aeq y y) . F .. d'.1 d'.2] = 
+	subst [g, d': block (y:term, ae_y: aeq y y), 
+ 	          d : block (x:term, ae_x:aeq x x) . D .. d d'.1 d'.2 ] 
+              [g, d' . D' .. ] in 
+    [g. ae_l \y.\ae_y. F .. y ae_y]
+
+| [g, b: block x:term, ae_x:aeq x x . ae_a (D1 .. b) (D2 .. b)] => 
+    let [g . F1 ..] = subst [g, b: block x:term, ae_x:aeq x x . D1 .. b] d' in 
+    let [g . F2 ..] = subst [g, b: block x:term, ae_x:aeq x x . D2 .. b] d' in 
+      [g. ae_a (F1 ..) (F2 ..)]
+
+;

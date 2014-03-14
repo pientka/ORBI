@@ -1,0 +1,5 @@
+Divided in 3 files
+EqualUntyped	refl/sym/trans/sub
+ceq.thm		completeness
+reflG.thm	G refl
+

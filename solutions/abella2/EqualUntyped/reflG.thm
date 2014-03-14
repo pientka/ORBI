@@ -1,0 +1,106 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Reflexivity of algo equality with gen ctx 
+%%  The Beluga way with is_tm in aeq
+%% this uses name, 
+%% 2 abella
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Specification "reflG".
+
+
+%Close tm, nat.  
+
+Define xaG :   olist  -> prop by
+  xaG  nil  ;
+  nabla x, xaG ( aeq x x:: is_tm x:: Gamma)  
+  	   := xaG Gamma.
+
+Define name : tm -> prop by
+  nabla x, name x.
+
+%% member lemma
+
+Theorem ctx_tm_name : forall   Gamma F,
+  xaG Gamma   ->  member F  Gamma -> exists (M : tm), (F = (is_tm M) \/ F = (aeq M M)) /\ name M /\ member (aeq M M) Gamma. 
+induction on 1. intros. case H1.
+  case H2.
+  case H2. search.
+  case H4.search.
+  apply IH to H3 H5.search.
+
+Theorem gaeq_strenx:  forall Gamma R S, nabla n1,
+xaG Gamma ->  {Gamma, is_tm n1, aeq n1 n1 |- aeq (R n1) (S n1)} -> {Gamma, aeq n1 n1 |- aeq (R n1) (S n1)}.
+induction on 2.intros.case H2.
+%app
+	  apply IH to H1 H3. apply IH to H1 H4.search.
+
+%lam 
+apply IH to _ H3. search.
+% ctx
+	  case H4.case H3.search.
+	  case H5.case H3.
+	  apply ctx_tm_name to H1 H6.
+ 	  case H7.
+	       case H3.
+	       case H3.search.
+
+
+Theorem gaeq_refl : forall Gamma M ,
+ xaG  Gamma   -> {Gamma |- is_tm M} -> {Gamma |- aeq M M}.
+induction on 2. intros. case H2.
+%app
+    apply IH to H1 H4.apply IH to  _ H3.search.
+%lam
+%weaken
+monotone H3 with (  aeq n1 n1 :: is_tm n1:: Gamma).
+clear H3.
+apply IH to  _ H4.
+% stren
+apply  gaeq_strenx to _ H5.
+search.
+
+% var
+apply ctx_tm_name to  _  _.
+case H5. case H3. search.
+	case H4.
+	case H3.case H3.
+
+
+
+/*
+Type tt o.
+    Type c tm.
+
+    Theorem counterexample : forall L K,
+      L = (tt => is_tm c) :: tt :: nil ->
+      K = nil ->
+      (forall A, member (is_tm A) L -> member (is_tm A) K) /\
+      { L |- is_tm c } /\
+      ({ K |- is_tm c } -> false).
+    intros. case H1. case H2.
+    split.
+      intros. case H3. case H4. case H5.
+      search.
+      intros. case H3.
+
+
+    Theorem counterexample2 : nabla x, forall L K, 
+      L = ( is_tm x => aeq x c) :: is_tm x :: aeq x x :: nil ->
+      K = aeq x x :: ( is_tm x => aeq x c) ::   nil ->
+      { L |- aeq x c } /\
+      ({ K |- aeq x c } -> false).
+    intros.
+    case H1.
+    split.
+	search.
+    case H2.
+	intros.
+	case H3. case H5. case H4.
+	      case H6.
+	      case H4.case H7.case H9.case H8.case H10.
+	      	   case H8.case H11.case H7.
+		  
+%qed
+*/	    
+
+

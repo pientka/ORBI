@@ -1,0 +1,44 @@
+%% Syntax
+tp: type.
+i: tp.
+arr: tp -> tp -> tp.
+
+tm: type.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+%% Judgments
+oft: tm -> tp -> type.
+pr: tm -> tm -> type.
+
+%% Rules
+oft_l: ({x:tm} oft x A -> oft (M x) B) ->
+       oft (lam (\x. M x)) (arr A B).
+oft_a: oft M (arr A B) -> oft N A -> oft (app M N) B.
+
+pr_l: ({x:tm} pr x x -> pr (M x) (N x)) 
+       -> pr (lam (\x. M x)) (lam (\x. N x)).
+pr_b: ({x:tm} pr x x -> pr (M1 x) (M2 x)) ->
+         pr N1 N2 -> pr (app (lam (\x. M1 x)) N1) (M2 N2).
+pr_a: pr M1 M2 -> pr N1 N2 -> pr (app M1 N1) (app M2 N2).
+
+%% Schemas
+schema xtG: block (x:tm; u:oft x T).
+schema xrG: block (x:tm; u:pr x x).
+schema xrtG: block (x:tm; u:pr x x; v:oft x T).
+
+%% Definitions
+inductive xrtR: {G:xrG} {H:xtG} prop =
+| xrt_nil : xrtR nil nil
+| xrt_cons: xrtR G H ->
+            xrtR (G, block x:tm; u:pr x x) (H, block x:tm; v:oft x A).
+
+%% Theorems
+theorem substG: {M:tm->tm}{N:tm}{A:tp}{B:tp}{H:xtG}
+  [H, block x:tm; oft x A |- oft (M x) B] -> [H |- oft N A] ->
+  [H |- oft (M N) B].
+theorem typePresG: {H:xrtG}
+  [G |- pr M N] -> [G |- oft M A] -> [G |- oft N A].
+theorem typePresR: {G:xrG}{H:xtG}
+  xrtR G H -> [G |- pr M N] -> [H |- oft M A] -> [H |- oft N A].
+

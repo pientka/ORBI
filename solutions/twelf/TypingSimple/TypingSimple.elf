@@ -1,0 +1,55 @@
+% Definition of types and expressions
+tp: type.  %name tp T a.
+arr: tp -> tp -> tp.
+nat: tp.
+
+tm: type. %name tm M x.
+lam : tp -> (tm -> tm) -> tm.
+app : tm -> tm -> tm.
+
+% Typing judgment
+oft: tm -> tp -> type. %name oft D u.
+
+of_lam: ({x:tm}oft x T1 -> oft (E x) T2)
+	-> oft (lam T1 E) (arr T1 T2).
+	  
+of_app: oft E1 (arr T2 T) -> oft E2 T2
+       -> oft (app E1 E2) T.
+
+
+
+% Equality predicate
+atp: tp -> tp -> type. %name atp E e.
+at_nat: atp nat nat.
+at_arr:  atp T1 S1 -> atp T2 S2
+	-> atp (arr T1 T2) (arr S1 S2).
+
+ref: {T}atp T T -> type.
+%mode ref +T -D.
+r_nat: ref nat at_nat.
+r_arr: ref (arr T1 T2) (at_arr D1 D2)
+	<- ref T1 D1
+	<- ref T2 D2.
+
+
+%worlds ( ) (ref T D).
+%covers ref +T -D.
+%total T (ref T D).
+
+unique : oft E T -> oft E T' -> atp T T' -> type. 
+%mode unique +D +F -E.
+u_lam: unique (of_lam D) (of_lam F)  (at_arr E1 E2)
+	<- ref T1 E1
+	<- ({x}{u:oft x T1}
+            unique u u E1 -> unique (D x u) (F x u) E2).
+
+u_app: unique (of_app D1 D2) (of_app F1 F2) E2
+	<- unique D1 F1 (at_arr E1 E2).
+
+
+%block xtG_u : some {T:tp}{E1:atp T T} block {x:tm}{u:oft x T}{e:unique u u E1}.
+%worlds (xtG_u) (unique D F E).
+
+%covers unique +D +F -E.
+%terminates D (unique D F E).
+%total D (unique D F E).
