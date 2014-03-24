@@ -2,11 +2,15 @@
 (****************************************************************
    File: sl.v                                                 
    Authors: Amy Felty
-   Version: Coq V8.4pl2
    Date: May 2009
+   Current Version: Coq V8.4pl2
                                                                  
    An intuitionistic sequent calculus used as a specification
-   logic in the style of FOLDN, defined for use in two-level Hybrid
+   logic, for use in two-level Hybrid.  See:
+
+   Amy Felty and Alberto Momigliano, "Hybrid: A Definitional Two Level
+   Approach to Reasoning with Higher-Order Abstract Syntax."  Journal
+   of Automated Reasoning, 48(1):43-105, 2012.
   ***************************************************************)
 
 Require Export Hybrid.

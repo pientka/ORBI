@@ -2,11 +2,15 @@
 (****************************************************************
    File: Hybrid.v                                                 
    Authors: Amy Felty
-   Version: Coq V8.4pl2
    Date: May 2009
+   Current Version: Coq V8.4pl2
                                                                  
-   Encoding of Hybrid
-   Modified from Ambler, Crole, Momigliano TPHOLS 2002
+   The main library, described in:
+
+   Amy Felty and Alberto Momigliano, "Hybrid: A Definitional Two Level
+   Approach to Reasoning with Higher-Order Abstract Syntax."  Journal
+   of Automated Reasoning, 48(1):43-105, 2012.
+
   ***************************************************************)
 
 Require Export Div2.
