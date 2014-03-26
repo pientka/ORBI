@@ -70,7 +70,7 @@ Hint Resolve proper_Var : hybrid.
   ****************************************************************)
 Inductive atm : Set :=
    oft : uexp -> tp -> atm
- | term : uexp -> atm.
+ | is_term : uexp -> atm.
 
 Definition oo_ := oo atm Econ.
 Definition atom_ : atm -> oo_ := atom Econ.
@@ -85,7 +85,7 @@ Hint Unfold oo_ atom_ T_: hybrid.
 Definition nvA (a:atm) : var
   := match a with
        oft e t => (newvar e)
-     | term e => (newvar e)
+     | is_term e => (newvar e)
      end.
 
 Lemma nvA_oft : forall (e:uexp) (t:tp),
@@ -94,7 +94,7 @@ Proof.
 simpl; auto.
 Qed.
 
-Lemma nvA_term : forall (e:uexp), nvA (term e) = (newvar e).
+Lemma nvA_term : forall (e:uexp), nvA (is_term e) = (newvar e).
 Proof.
 simpl; auto.
 Qed.
@@ -197,11 +197,11 @@ Inductive prog : atm -> oo_ -> Prop :=
         (Conj (atom_ (oft M (arr B A))) (atom_ (oft N B)))
   | tm_l : forall (A:tp) (M:uexp -> uexp),
       abstr M ->
-      prog (term (lam A (fun x => (M x))))
-        (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))))
+      prog (is_term (lam A (fun x => (M x))))
+        (All (fun x:uexp => (Imp (is_term x) (atom_ (is_term (M x))))))
   | tm_a : forall M N:uexp,
-      prog (term (app M N))
-        (Conj (atom_ (term M)) (atom_ (term N))).
+      prog (is_term (app M N))
+        (Conj (atom_ (is_term M)) (atom_ (is_term N))).
 
 Hint Resolve of_l of_a tm_l tm_a : hybrid.
 
@@ -370,10 +370,10 @@ Inductive xtR : list atm -> list atm -> Prop :=
 | nil_xt : xtR nil nil
 | cons_xt : forall (Phi_x Phi_t:list atm) (x:uexp) (t:tp),
     xtR Phi_x Phi_t ->
-    xtR (term x::Phi_x) (oft x t::Phi_t).
+    xtR (is_term x::Phi_x) (oft x t::Phi_t).
 
 Lemma memb_adeq : forall (Phi_x Phi_t:list atm) (E:uexp) (T:tp),
-  xtR Phi_x Phi_t -> In (oft E T) Phi_t -> In (term E) Phi_x.
+  xtR Phi_x Phi_t -> In (oft E T) Phi_t -> In (is_term E) Phi_x.
 Proof.
 intros Phi_x Phi_t E B; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | h2].
@@ -395,7 +395,7 @@ Lemma of_adeq :
   forall (i:nat) (M:uexp) (A:tp) (Phi_x Phi_t:list atm),
   xtR Phi_x Phi_t ->
   seq_ i Phi_t (atom_ (oft M A)) ->
-  seq_ i Phi_x (atom_ (term M)).
+  seq_ i Phi_x (atom_ (is_term M)).
 Proof.
 intro i.
 generalize
@@ -403,7 +403,7 @@ generalize
    (fun i:nat =>
     forall (M : uexp) (A : tp) (Phi_x Phi_t : list atm),
     xtR Phi_x Phi_t ->
-    seq_ i Phi_t (atom_ (oft M A)) -> seq_ i Phi_x (atom_ (term M)))).
+    seq_ i Phi_t (atom_ (oft M A)) -> seq_ i Phi_x (atom_ (is_term M)))).
 intro H'.
 apply H'; clear H' i; auto.
 intros i h M A Phi_x Phi_t h1 h2.
@@ -412,7 +412,7 @@ inversion H0; subst; clear H0.
 (* lam case *)
 inversion H3; subst; clear H3.
 unfold seq_,atom_; apply s_bc with
- (All (fun x:uexp => (Imp (term x) (atom_ (term (M0 x))))));
+ (All (fun x:uexp => (Imp (is_term x) (atom_ (is_term (M0 x))))));
  auto with hybrid.
 apply s_all; auto.
 intros x h2.
@@ -423,7 +423,7 @@ apply h with B (oft x A0::Phi_t); eauto with hybrid; try omega.
 (* app case *)
 inversion H3; subst; clear H3.
 unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (term M0)) (atom_ (term N)));
+  apply s_bc with (Conj (atom_ (is_term M0)) (atom_ (is_term N)));
   auto with hybrid.
 apply s_and; auto.
 apply h with (arr B A) Phi_t; auto; try omega.
@@ -435,7 +435,7 @@ Qed.
 
 Lemma of_adeq_cor : forall (M:uexp) (A:tp),
   seq0 (atom_ (oft M A)) ->
-  seq0 (atom_ (term M)).
+  seq0 (atom_ (is_term M)).
 Proof.
 intros M A [n h].
 generalize nil_xt; intro h1.
