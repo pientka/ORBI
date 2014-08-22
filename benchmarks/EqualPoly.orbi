@@ -15,7 +15,7 @@ aeq: tm -> tm -> type.
 
 %% Rules
 at_al: ({a:tp} atp a a -> atp (T a) (S a)) 
-        -> atp (all (\a. T x) (all (\a. S a)).
+        -> atp (all (\a. T a) (all (\a. S a)).
 at_a: atp T1 T2 -> atp S1 S2 -> atp (arr T1 S1) (arr T2 S2).
 ae_l: ({x:tm} aeq x x -> aeq (M x) (N x)) 
         -> aeq (lam (\x. M x)) (lam (\x. N x)).
@@ -38,7 +38,7 @@ inductive atpR: {G:aG} {H:atpG} prop =
 inductive aeqR: {G:axG} {H:aeqG} prop =
 | aeq_nil: aeqR nil nil
 | aeq_cons1 : aeqR G H -> aeqR (G, block a:tp) (H, block a:tp; u:atp a a)
-| aeq_cons2 : aeqR G H -> aeqR (G, block x:tm) (H, block s:tm; u:aeq x x).
+| aeq_cons2 : aeqR G H -> aeqR (G, block x:tm) (H, block x:tm; u:aeq x x).
 
 %% Theorems
 
