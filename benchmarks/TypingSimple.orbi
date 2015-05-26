@@ -16,11 +16,13 @@ oft_l: ({x:tm} oft x A -> oft (M x) B) ->
 oft_a: oft M (arr A B) -> oft N A -> oft (app M N) B.
 
 %% Schemas
-schema xtG: block (x:tp; u:oft x A).
+schema xtG = some [t:tp] block (x:tm, u:oft x t);
 
+%{
 %% Theorems
-theorem tyUniq: {H:xtG}{M:tm}{A:tp}{B:tp}
-  [H |- oft M A] -> [H |- oft M B] -> A = B.
+theorem tyUniq: {h:xtG}{M:tm}{A:tp}{B:tp}
+  [h |- oft M A] -> [h |- oft M B] -> A = B.
 
 %% Directives
 % [hy] explicit x in xtG.
+%}

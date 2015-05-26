@@ -23,22 +23,23 @@ pr_b: ({x:tm} pr x x -> pr (M1 x) (M2 x)) ->
 pr_a: pr M1 M2 -> pr N1 N2 -> pr (app M1 N1) (app M2 N2).
 
 %% Schemas
-schema xtG: block (x:tm; u:oft x T).
-schema xrG: block (x:tm; u:pr x x).
-schema xrtG: block (x:tm; u:pr x x; v:oft x T).
+schema xtG = some [t:tp] block (x:tm, u:oft x t);
+schema xrG = block (x:tm, u:pr x x);
+schema xrtG =  some [t:tp] block x:tm, of_v: oft x t, pr_v: pr x x;
 
 %% Definitions
-inductive xrtR: {G:xrG} {H:xtG} prop =
-| xrt_nil : xrtR nil nil
-| xrt_cons: xrtR G H ->
-            xrtR (G, block x:tm; u:pr x x) (H, block x:tm; v:oft x A).
+inductive Rxrt: {g:xrG} {h:xtG} prop =
+| Rxrt_nil : Rxrt [] []
+| Rxrt_cons:  Rxrt [g] [h] ->
+            Rxrt [g,b: block x:tm, u:pr x x] [h, b:block x:tm, v:oft x A];
 
 %% Theorems
-theorem substG: {M:tm->tm}{N:tm}{A:tp}{B:tp}{H:xtG}
-  [H, block x:tm; oft x A |- oft (M x) B] -> [H |- oft N A] ->
-  [H |- oft (M N) B].
-theorem typePresG: {H:xrtG}
-  [G |- pr M N] -> [G |- oft M A] -> [G |- oft N A].
-theorem typePresR: {G:xrG}{H:xtG}
-  xrtR G H -> [G |- pr M N] -> [H |- oft M A] -> [H |- oft N A].
-
+%{
+theorem substG: {M:tm->tm}{N:tm}{A:tp}{B:tp}{h:xtG}
+  [h, block x:tm, oft x A |- oft (M x) B] -> [h |- oft N A] ->
+  [h |- oft (M N) B].
+theorem typePresG: {h:xrtG}
+  [g |- pr M N] -> [g |- oft M A] -> [g |- oft N A].
+theorem typePresR: {g:xrG}{h:xtG}
+  Rxrt g h -> [g |- pr M N] -> [h |- oft M A] -> [h |- oft N A].
+}%
