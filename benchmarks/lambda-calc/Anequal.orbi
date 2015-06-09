@@ -1,0 +1,83 @@
+%% alpha-inequality
+%% Author: Alberto Momigliano, based on his thesis
+%% A challange from Cheney & Urban's TOPLAS Nominal Logic Programming 
+
+%% Syntax
+tm: type.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+%% Judgments
+aeq: tm -> tm -> type.
+neq: tm -> tm -> type.
+exh: tm -> tm -> type.
+
+%% Rules
+ae_a: aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
+ae_l: ({x:tm} aeq x x -> aeq (M x) (N x))
+          -> aeq (lam (\x. M x)) (lam (\x. N x)).
+
+
+neq_la: neq  (lam (\x. M x)) (app M1 M2).
+neq_al: neq  (app M1 M2) (lam (\x. M x)) .
+
+ne_a1: neq M1 N1 ->  neq (app M1 M2) (app N1 N2).
+ne_a1: neq M2 N2 -> neq (app M1 M2) (app N1 N2).
+ne_l: ({x:tm} ({E: tm -> tm} neq x (lam E))
+        -> ({E: tm -> tm} neq  (lam E) x) 
+	-> ({E1:tm}{E2:tm} neq  x (app E1 E2))
+	-> ({E1:tm}{E2:tm} neq  (app E1 E2) x)
+        -> neq (M x) (N x))
+        -> neq (lam (\x. M x)) (lam (\x. N x)).
+
+
+ex_1: aeq E F -> exh E F.
+ex_2: neq E F -> exh E F.
+
+%% Schemas
+schema xG = block (x:tm);
+schema xaG = block (x:tm, _u:aeq x x);
+schema xnG = block (x:tm, _u1:({E:tm -> tm} neq x (lam E)), _u2:({E:tm -> tm} neq (lam E) x),
+                    _v1: ({E1:tm}{E2:tm} neq  x (app E1 E2)), _v2: ({E1:tm}{E2:tm} neq (app E1 E2) x));
+
+schema xanG = block (x:tm,  _u:aeq x x, _u1:({E:tm -> tm} neq x (lam E)), _u2:({E:tm -> tm} neq (lam E) x),
+                    _v1: ({E1:tm}{E2:tm} neq  x (app E1 E2)), _v2: ({E1:tm}{E2:tm} neq (app E1 E2) x));
+
+
+%% Definitions
+%% why does this not parse?
+%{
+inductive Rxa: {g:xaG} {h:xnG} prop =
+| Rxa_nil: Rxa [] []
+| Rxa_cons: Rxa [g] [h] -> 
+    Rxa [g, b:block (x:tm, u:aeq x x)] 
+        [h, b:block (x:tm, u1 : ({E:tm -> tm} neq x (lam E)) , u2:({E:tm -> tm} neq (lam E) x), 
+                    v1: ({E1:tm}{E2:tm} neq  x (app E1 E2)), v2: ({E1:tm}{E2:tm} neq (app E1 E2) x))];
+}%
+
+% Falsehood: maybe this should go in a prelude
+
+inductive False: prop = ;
+
+%% Theorems
+
+% disjointness: not thecase that two terms are both equal and different
+
+rec disj: {h:xanG} [h |- aeq E F] -> [h |- neq E F] -> False = ?;
+% theorem disj: {h:xanG} [h |- aeq E F] -> [h |- neq E F] -> False;
+
+% exhaustivity: either two terms are equal or they are different 
+% theorem exh:  {h:xanG}  {E:  tm}  {F: tm} [h |- exh E F];  
+
+rec exh: {h:xanG}  {E: [h |- tm]}  {F: [h |- tm]} [h |- exh E F] = ?;
+
+% [hy,ab] wf tm.
+% [hy,ab] explicit (E : tm) in exh.
+% [hy,ab] explicit (F : tm) in exh.
+
+%  Missing: the R versions
+
+% 
+
+
+

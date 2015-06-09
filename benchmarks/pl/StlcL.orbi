@@ -1,0 +1,132 @@
+% STLC with lists operators as constants
+% Author: Alberto Momigliano 
+% adaptation of PLT-redex model at
+% http://www.cs.utah.edu/plt/snapshots/current/doc/redex/benchmark.html
+
+%% Syntax
+
+i : type.
+tp   : type.
+int  : tp.  
+arrow  : tp -> tp -> tp.
+list : tp -> tp. % a bit more general than redex which is just int list
+
+
+cnt : type. % constants
+cons : cnt.
+hd : cnt.
+tl : cnt.
+nil : cnt.
+toInt : i -> cnt.
+
+exp  : type.
+c   : cnt -> exp.
+lam  : (exp -> exp) -> exp.
+app  : exp -> exp -> exp.
+error : exp.
+
+
+%% Judgments
+
+% Equalities
+eeq : exp -> exp -> type.
+teq : tp -> tp -> type.
+% Typing
+oft : exp -> tp -> type.
+ofc :cnt -> tp -> type.
+
+% Value
+value : exp -> type.
+% Errors
+is_err : exp -> type.
+
+% Progress
+progress : exp -> type.
+
+% Reduction
+red1 : exp -> exp -> type.
+reds : exp -> exp -> type.
+
+%% Rules
+
+val_c     : value (c _).
+val_lam   : value (lam E).
+val_c1    : value (app (c cons) V)
+	     <- value V.
+val_c2    : value (app (app (c cons) V1) V2)
+	     <- value V1
+	     <- value V2.
+
+
+ee:   is_err error.
+e_hd: is_err (app (c hd) (c nil)).
+e_tl: is_err (app (c tl) (c nil)).
+e_a1: is_err (app  E1 E2) <- is_err E1.
+e_a2: is_err (app  E1 E2) 
+      <- value E1
+      <- is_err E2.
+
+
+red_hd   : red1 (app (c hd) (app (app (c cons) E1) E2)) E1.
+red_tl   : red1 (app (c tl) (app (app (c cons) E1) E2)) E2.
+red_app  : red1 (app (lam E1) E2)   (E1 E2).
+red_app1 : red1 (app E1 E2) (app E1' E2)
+	     <- reds E1  E1'.
+red_app2 : reds (app V1 E2)  (app V1 E2')
+	     <- value V1
+	     <- reds E2 E2'.
+
+red*_beta : reds E  E'
+	     <- red1 E E'.
+red*_refl : reds E E.
+red*_trans : reds E E''
+	      <- reds E E'
+	      <- reds E' E''.
+
+prog_v : value E -> progress E.
+prog_s : red1 E E' -> progress E.
+prog_e : is_err E -> progress E.
+
+
+tc_i : ofc (toInt N) int.
+tc_nl: ofc nil (list int).
+tc_hd: ofc hd (arrow (list int) int).
+tc_tl: ofc hd (arrow (list int) (list int)).
+tc_cn: ofc cons (arrow int (arrow (list int) (list int))).
+
+
+tp_c     : oft (c C) T
+	       <- ofc C T.
+tp_e     : oft error T.
+
+tp_lam :   ({x:exp} oft x T1 -> oft (E x) T2)
+        -> oft (lam  (\x . E x)) (arrow T1 T2).
+tp_app : oft E2 T2 ->
+         oft E1 (arrow T2 T1)
+	 -> oft (app E1 E2) T1.
+
+t_refl : teq T T.
+e_refl : eeq E E.
+
+
+
+
+%% Schemas
+schema oG = block (x:exp, d:oft x t);
+
+
+%% Definitions
+
+
+inductive Goft: {g:oG} prop =
+| Oft_nil: Goft []
+| Oft_cons: Goft [g]  -> Goft [g, b: block x:exp, u:oft x T[]];
+
+%% Theorems
+
+rec tu:   {h:oG}[h |- oft E T1[]] -> [h |- oft E T2[]] -> [ |- teq T1 T2] = ? ;
+rec prog: [ |- oft E T] -> [ |- progress E] = ? ;
+rec tpsr:  [ |- red1 E E'] -> [ |- oft E T] -> [ |- oft E' T] = ? ;
+rec ts:   [ |- reds E V] ->  [ |- oft E T] ->   [ |- oft V T] = ? ;
+rec ru:    [ |- red1 E E1] -> [ |- red1 E E2] -> [ |- eeq E1 E2] = ? ;
+
