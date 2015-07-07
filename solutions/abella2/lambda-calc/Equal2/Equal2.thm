@@ -1,0 +1,89 @@
+%% Equivalence of single and double eigenvariable definitions of copy
+
+Specification "Equal2".
+
+Theorem member_fresh : forall L E, nabla (x:tm),
+  member (E x) L -> exists F, E = y\F.
+induction on 1. intros. case H1.
+  search.
+  apply IH to H2. search.
+
+
+Define ctxs : olist -> olist -> prop by
+  ctxs nil nil ;
+  ctxs (aeq X Y :: L1) (aeq2 X Y :: L2) := ctxs L1 L2.
+
+Define name : tm -> prop by
+  nabla x, name x.
+
+Theorem ctx_mem1 : forall F L1 L2,
+  ctxs L1 L2 -> member F L1 -> exists X Y, F = aeq X Y.
+induction on 1. intros.
+case H1.
+  case H2.
+  case H2. search. apply IH to H3 H4. search.
+
+Theorem ctx_mem2 : forall F L1 L2,
+  ctxs L1 L2 -> member F L2 -> exists X Y, F = aeq2 X Y.
+induction on 1. intros.
+case H1.
+  case H2.
+  case H2. search. apply IH to H3 H4. search.
+
+
+%% aeq implies aeq2
+
+% show that aeq2 could descend under abstractions like aeq
+
+Theorem aeq2_align : forall M N K L, nabla z,
+  ctxs K L ->
+  {L, aeq2 z z |- aeq2 (M z) (N z)} ->
+    nabla x y, {L, aeq2 x y |- aeq2 (M x) (N y)}.
+induction on 2. intros. case H2.
+  apply IH to H1 H3. apply IH to H1 H4. search.
+  apply IH to _ H3. search.
+  case H4.
+    case H3. search.
+    apply member_fresh to H5. apply ctx_mem2 to H1 H5. case H3. search.
+
+Theorem ctxs_member1 : forall X Y L K,
+  ctxs L K -> member (aeq X Y) L -> member (aeq2 X Y) K.
+induction on 1. intros. case H1.
+  case H2.
+  case H2.
+    search.
+    apply IH to H3 H4.
+      search.
+
+Theorem aeq_aeq2 : forall L K M N,
+  ctxs L K -> {L |- aeq M N} -> {K |- aeq2 M N}.
+induction on 2. intros. case H2.
+  apply IH to H1 H3. apply IH to H1 H4. search.
+  apply IH to _ H3. apply aeq2_align to H1 H4. search.
+  apply ctx_mem1 to H1 H4. case H3. apply ctxs_member1 to H1 H4. search.
+
+
+%% aeq2 implies aeq
+
+% show that aeq could descend under abstractions like aeq2
+
+Theorem aeq_align : forall M N L, nabla x y,
+  {L, aeq x y |- aeq (M x) (N y)} ->
+    nabla z, {L, aeq z z |- aeq (M z) (N z)}.
+intros. inst H1 with n2 = n1. search.
+
+Theorem ctxs_member2 : forall X Y L K,
+  ctxs L K -> member (aeq2 X Y) K -> member (aeq X Y) L.
+induction on 1. intros. case H1.
+  case H2.
+  case H2.
+    search.
+    apply IH to H3 H4.
+      search.
+
+Theorem aeq2_aeq : forall L K M N,
+  ctxs L K -> {K |- aeq2 M N} -> {L |- aeq M N}.
+induction on 2. intros. case H2.
+  apply IH to H1 H3. apply IH to H1 H4. search.
+  apply IH to _ H3. apply aeq_align to H4. search.
+  apply ctx_mem2 to H1 H4. case H3. apply ctxs_member2 to H1 H4. search.

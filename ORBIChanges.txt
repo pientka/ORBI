@@ -1,0 +1,25 @@
+Legacy Syntax
+
+Here we outline some of the changes in ORBI syntax since the
+publication of the paper "The Next 700 Challenge Problems for
+Reasoning with Higher-Order Abstract Syntax Representations. Part 2:
+A Survey."
+
+Issue					Old			New
+
+Terminators in schemas,			.			;
+inductive defs and thms
+
+Separators inside blocks		;			,
+
+Schema decl	   			s_id ":" alt_blk	s_id "=" alt_blk
+
+empty ctx				nil   			[]
+
+ctx element				id			[id]
+
+ctx snoc				ctx "," blk	 	ctx "," id ":" blk
+
+Ctx variables start with		upper case		lower case
+
+Ind defs constructors starts with	lower case		upper case

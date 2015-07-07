@@ -1,0 +1,99 @@
+%%% Church Rosser theorem via complete development (Takayama)
+%%% adapted by AM from Abella's library
+
+%% R Version, fine-grained, so it won't correspond exactly to Abella
+%%   implementation
+
+%% Syntax
+
+tm: type.
+% [hy,ab] wf tm.
+
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+%% Judgments
+
+pr: tm -> tm -> type.
+cd: tm -> tm -> type.
+notlam : tm -> type.
+
+%% Rules
+
+% paralled reduction
+pr_l: ({x:tm} pr x x -> pr (M x) (N x)) 
+       -> pr (lam (\x. M x)) (lam (\x. N x)).
+pr_b: ({x:tm} pr x x -> pr (M1 x) (M2 x)) ->
+         pr N1 N2 -> pr (app (lam (\x. M1 x)) N1) (M2 N2).
+pr_a: pr M1 M2 -> pr N1 N2 -> pr (app M1 N1) (app M2 N2).
+
+% complete development
+cd/beta : cd (app (lam M) N) ( M' N')
+          <- ({x:tm} notlam x -> cd x  x -> cd (M x)  (M' x))
+          <- cd N  N'.
+cd/app  : cd (app M N) (app M' N')
+          <- cd M  M'
+          <- cd N N'
+	  <- notlam M.
+cd/lam  : cd (lam M)  (lam M')
+          <- ({x:tm} notlam x -> cd x x -> cd (M x) (M' x)).
+
+
+%% Schemas
+schema xrG = block (x:tm, u:pr x x); % name h
+schema xcdG = block (x : tm , nlx : notlam x , cdx : cd x  x); % name g
+schema triG = block (x : tm , nlx : notlam x , cdx : cd x  x, prx: pr x x);
+
+%% Definitions
+
+inductive Rxrt: {h:xrG} {g:xcdG} prop =
+| Rxrt_nil : Rxrt [] []
+| Rxrt_cons: Rxrt [h] [g] ->
+            Rxrt [h, b:block x:tm, u:pr x x][g, b:block x:tm,  nlx : notlam x , v:cd x x];
+
+% [hy,ab] explicit (x : tm) in Rxrt. 
+
+%{
+%% Theorems
+
+% Theorem notabs_abs_absurd: {g:xcdG}{A:tm}
+    [g |- notabs (abs A)] -> false.
+% by cases
+% note: promote to Rxrt
+%// this would synthesis xcdG w/o is_tm and state xcdG G -> {G|- ...} -> ... 
+
+% pariwise substitution of pr
+theorem substG: {h:xrG}{M1:tm->tm}{M2:tm->tm}{N2:tm}{N2:tm}
+  [h, block x:tm, pr x x |- pr (M1 x) (M2 x)] -> [h |- pr N1 N2] ->
+  [h |- pr (M1 N1) (M2 N2)];
+% induct on   [h, block x:tm, pr x x |- pr (M1 x) (M2 x)]
+% note: promote to Rxrt
+
+%// this would synthesis xrG w/o is_tm and state xrG H -> {H, pr x x |- ...} -> ... 
+
+
+%% There is a cd step from every trm
+Theorem cd_exists : {g:xcdG}{A:tm} <B:tm> [g|- cd A B].
+% induct on A:tm
+% note:  Rxrt
+
+% [hy,ab] explicit (A : tm) in  g in cd_exists.
+% [bel] explicit A in  h in cd_exists.
+
+%// this would synthesis xcdG with is_tm as a G ctx 
+%// and state xcdG G -> {G |- is_tm A } -> exists B, {G|- cd A B}
+
+
+% triangle property of cd/pr
+theorem cd_pr_triangleR : {h:xrG}{g:xcdG}{A:tm}{B:tm} {C:tm} 
+     Rxrt [h] [g] -> [h |- pr A B] -> [g |- cd A C] -> [h |- pr B C];
+% induct on [g |- cd A C]
+% uses:  notabs_abs_absurd, substG
+
+% requires: promotion to Rxrt
+% Theorem pr_diamond: {h:xrG }{A:tm}{B1:tm}{B2:tm} {C:tm} 
+  [h |- pr A B1] -> [h |- pr A B2] ->
+        exists C, [h |- pr B1 C] & [h |- pr B2 C].
+
+% uses: cd_exists, cd_pr_triangleR, 
+

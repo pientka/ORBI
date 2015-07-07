@@ -1,0 +1,89 @@
+%%% Church Rosser theorem via complete development (Takayama)
+%%% adapted by AM from Abella's library and marginally from Twelf's wiki
+%% R Version, not FG
+
+%% Syntax
+
+tm: type.
+% [hy,ab] wf tm.
+
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+%% Judgments
+
+pr: tm -> tm -> type.
+cd: tm -> tm -> type.
+notlam : tm -> type.
+
+%% Rules
+
+% paralled reduction
+pr_l: ({x:tm} pr x x -> pr (M x) (N x)) 
+       -> pr (lam (\x. M x)) (lam (\x. N x)).
+pr_b: ({x:tm} pr x x -> pr (M1 x) (M2 x)) ->
+         pr N1 N2 -> pr (app (lam (\x. M1 x)) N1) (M2 N2).
+pr_a: pr M1 M2 -> pr N1 N2 -> pr (app M1 N1) (app M2 N2).
+
+% complete development
+cd/beta : cd (app (lam M) N) ( M' N')
+          <- ({x:tm} notlam x -> cd x  x -> cd (M x)  (M' x))
+          <- cd N  N'.
+cd/app  : cd (app M N) (app M' N')
+          <- cd M  M'
+          <- cd N N'
+	  <- notlam M.
+cd/lam  : cd (lam M)  (lam M')
+          <- ({x:tm} notlam x -> cd x x -> cd (M x) (M' x)).
+
+
+%% Schemas
+schema xG = block (x:tm);
+schema xrG = block (x:tm, u:pr x x);
+schema xcdG = block (x : tm , nlx : notlam x , cdx : cd x  x);
+
+
+%% Definitions
+
+inductive Rxplcd: {k:xG}{g:xrG} {h:xcdG} prop =
+| Rxplcd_nil : Rxplcd [] [] []
+| Rxplcd_cons: Rxplcd [k] [g] [h] ->
+            Rxplcd [k, b: block x: tm][g, b:block x:tm, u:pr x x][h, b:block x:tm,  nlx : notlam x , v:cd x x];
+
+% [hy,ab] explicit (x : tm) in k in Rxplcd. 
+
+%{
+%% Theorems
+
+% Theorem notabs_abs_absurd:  {k:xG}{g:xrG}{h:xcdG}{A:tm}
+    Rxplcd [k] [h] [g] -> [h |- notabs (abs A)] -> false.
+% by cases
+
+% pariwise substitution of pr
+theorem substG: {M1:tm->tm}{M2:tm->tm}{N2:tm}{N2:tm}{k:xG}{h:xrG}{g:xcdG}
+  Rxplcd [k] [h] [g] -> [h, block x:tm, pr x x |- pr (M1 x) (M2 x)] -> [h |- pr N1 N2] ->
+  [h |- pr (M1 N1) (M2 N2)];
+% induct on   [h, block x:tm, pr x x |- pr (M1 x) (M2 x)]
+
+
+%% There is a cd step from every trm
+Theorem cd_exists : {g:xcdG}{k:xG}{h:xrG}{A:tm}  Rxplcd [k] [h] [g] -> <B:tm> [g|- cd A B].
+% induct on A:tm
+
+% [hy,ab] explicit (A : tm) in  h in cd_exists.
+% [bel] explicit A in  h in cd_exists.
+
+
+% triangle property of cd/pr
+theorem cd_pr_triangleR : {h:xrG}{g:xcdG}{k:xG}{A:tm}{B:tm} {C:tm} 
+     Rxplcd [k] [h] [g] -> [h |- pr A B] -> [g |- cd A C] -> [h |- pr B C];
+% induct on [g |- cd A C]
+% uses:  notabs_abs_absurd, substG
+
+% requires: promotion to Rxplcd
+% Theorem pr_diamond: {h:xrG }{A:tm}{B1:tm}{B2:tm} {C:tm} 
+  [h |- pr A B1] -> [h |- pr A B2] ->
+        exists C, [h |- pr B1 C] & [h |- pr B2 C].
+
+% uses: cd_exists, cd_pr_triangleR, 
+

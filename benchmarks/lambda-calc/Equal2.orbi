@@ -1,0 +1,57 @@
+%%% equivalence of aeq and aeq2
+%%% Author: Alberto Momigliano, adapted by Abella's library
+%%% Caution: the Abella solution uses a "loose" schema, which would not satisfy world checking
+%%% hence this file is *untrusted* 
+
+%% Syntax
+tm: type.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+%% Judgments
+aeq: tm -> tm -> type.
+aeq2: tm -> tm -> type.
+
+%% Rules
+ae_a: aeq M1 N1 -> aeq M2 N2 -> aeq (app M1 M2) (app N1 N2).
+ae_l: ({x:tm} aeq x x -> aeq (M x) (N x))
+          -> aeq (lam (\x. M x)) (lam (\x. N x)).
+
+
+ae_a: aeq2 M1 N1 -> aeq2 M2 N2 -> aeq2 (app M1 M2) (app N1 N2).
+ae_l: ({x:tm} {y:tm} aeq2 x y -> aeq2 (M x) (N x))
+          -> aeq2 (lam (\x. M x)) (lam (\x. N x)).
+
+
+%% Schemas
+schema xaG = block (x:tm,  _u:aeq x x);
+schema xa2G = block (x:tm, y:tm,  _u2: aeq2 x y);
+schema xaaG = block (x:tm, y:tm,  _u:aeq x x, _u2: aeq2 x y);
+
+%% Definitions
+
+inductive Rxaa: {g:xaG} {h:xa2G} prop =
+| Rxa_nil: Rxaa [] []
+| Rxa_cons: Rxaa [g] [h] -> 
+    Rxaa [g, b:block (x:tm, u:aeq x x)] 
+        [h, b: block (x:tm, y:tm, u2: aeq2 x y)];
+
+
+%% Theorems
+
+% G versions
+rec aeq_aeq2G: {h:xaaG} [h |- aeq E F] -> [h |- aeq2 E F] = ?;
+
+rec aeq2_aeqG: {h:xaaG} [h |- aeq2 E F] -> [h |- aeq E F]  = ?;
+
+% R Versions
+% theorem  aeq_aeq2R: {h:xaG} {g:xa2G} {E : tm} {F : tm} 
+%            Rxaa [h] [g] -> [h |- aeq E F] -> [g |- aeq2 E F];
+
+
+% theorem  aeq2_aeqR: {h:xaG} {g:xa2G} {E : tm} {F : tm} 
+%            Rxaa [h] [g] -> [g |- aeq2 E F] -> [h |- aeq2 E F];
+
+
+
+

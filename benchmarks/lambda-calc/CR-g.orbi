@@ -1,0 +1,84 @@
+%%% Church Rosser theorem via complete development (Takayama)
+%%% adapted by AM from Abella's library
+%% G Version, 
+
+%% Syntax
+
+tm: type.
+% [hy,ab] wf tm.
+
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+%% Judgments
+
+pr: tm -> tm -> type.
+cd: tm -> tm -> type.
+notlam : tm -> type.
+
+%% Rules
+
+% paralled reduction
+pr_l: ({x:tm} pr x x -> pr (M x) (N x)) 
+       -> pr (lam (\x. M x)) (lam (\x. N x)).
+pr_b: ({x:tm} pr x x -> pr (M1 x) (M2 x)) ->
+         pr N1 N2 -> pr (app (lam (\x. M1 x)) N1) (M2 N2).
+pr_a: pr M1 M2 -> pr N1 N2 -> pr (app M1 N1) (app M2 N2).
+
+% complete development
+cd/beta : cd (app (lam M) N) ( M' N')
+          <- ({x:tm} notlam x -> cd x  x -> cd (M x)  (M' x))
+          <- cd N  N'.
+cd/app  : cd (app M N) (app M' N')
+          <- cd M  M'
+          <- cd N N'
+	  <- notlam M.
+cd/lam  : cd (lam M)  (lam M')
+          <- ({x:tm} notlam x -> cd x x -> cd (M x) (M' x)).
+
+
+%% Schemas
+schema xrG = block (x:tm, u:pr x x);
+schema xpncG = block (x : tm, prx: pr x x, nlx : notlam x , cdx : cd x  x);
+
+
+%% Theorems
+
+
+%{
+% this should compile, may be the projection
+
+rec subst : {g:xrG} 
+            [g, b: block (x:tm, prx:pr x x) |- pr (M1 .. b.1) (M2 .. b.1)]
+	    -> [g. pr (N1 ..) (N2 ..)]  
+	    -> [g. pr (M1 .. (N1 ..)) (M2 .. (N2 ..)) ] = ?;
+
+}%
+
+rec cd_pr_triangleR : {h:xpncG} 
+      [h |- pr A B] -> [h |- cd A C] -> [h |- pr B C] = ?;
+
+
+% triangle property of cd/pr
+rec cd_pr_triangleR : {h:xpncG}
+     [h |- pr A B] -> [h |- cd A C] -> [h |- pr B C] = ?;
+
+
+
+
+%{
+
+
+%% There is a cd step from every trm
+% requires encoding of exists, so not done here.
+Theorem cd_exists : {g:xcdG}{A:tm} <B:tm> [g|- cd A B].
+
+% [hy,ab] explicit (A : tm) in  g in cd_exists.
+% [bel] explicit A in  h in cd_exists.
+
+
+% same encoding issue and also ocnjunction
+rec pr_diamond: {h:xrG}
+  [h |- pr A B1] -> [h |- pr A B2] ->
+        exists C, [h |- pr B1 C] & [h |- pr B2 C] = ?;
+
