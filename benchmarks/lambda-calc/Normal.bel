@@ -1,0 +1,45 @@
+%% Disjoint partitioning of lambda terms into normal and non-normal form
+%% adapted by AM from Abella's library
+%% G version
+
+%% Syntax
+tm: type.
+app: tm -> tm -> tm.
+lam: (tm -> tm) -> tm.
+
+%% Judgments
+normal: tm -> type.
+non_normal: tm -> type.
+neutral: tm -> type.
+exh: tm -> type.
+
+
+nn1: non_normal (app (lam R) M).
+nn2: non_normal (app M N) <- non_normal M.
+nn3: non_normal (app M N) <- non_normal N.
+nn4: non_normal (lam R) <- {x:tm} non_normal (R x).
+
+nl: normal (lam R) <- {x:tm} neutral x -> normal (R x).
+nn: normal M <- neutral M.
+nu: neutral (app M N) <- neutral M <-  normal N.
+
+ex_1: normal E -> exh E.
+ex_2: non_normal E -> exh E.
+
+%% Schemas
+schema xG = block (x:tm);
+schema xnuG = block (x:tm, u:neutral x);
+
+
+
+inductive False: prop = ;
+
+
+rec disj: {h:xnuG} [h |- normal E] -> [h |- non_normal E] -> False = ?;
+
+
+rec part:  {h:xnuG} {E:[h |- tm]}  [h |- exh E] = ?;  
+
+
+% [hy,ab] wf tm.
+% [hy,ab] explicit (E : tm) in part.
