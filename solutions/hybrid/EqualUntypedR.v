@@ -2,7 +2,7 @@
 
    File: EqualUntypedR.v
    Author: Amy Felty
-   Current Cqo Version: V8.7.1
+   Current Coq Version: V8.7.1
    January 2014
 
    Context relation version (R version) of:
