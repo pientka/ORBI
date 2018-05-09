@@ -1,7 +1,7 @@
 (****************************************************************
    File: ParRedR.v
    Authors: Amy Felty
-   Version: Coq V8.4pl2
+   Current Coq Version: V8.7.1
    Date: February 2014
 
    Context relation version (R version) of:

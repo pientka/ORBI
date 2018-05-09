@@ -2,7 +2,7 @@
 
    File: EqualUntypedG.v
    Author: Amy Felty
-   Version: Coq V8.4pl2
+   Current Coq Version: V8.7.1
    January 2014
 
    Generalized context version (G version) of:
@@ -65,7 +65,7 @@ Hint Resolve proper_Var : hybrid.
   ****************************************************************)
 
 Inductive atm : Set :=
-   is_tm : uexp -> atm
+   term : uexp -> atm
  | deq : uexp -> uexp -> atm
  | aeq : uexp -> uexp -> atm.
 
@@ -82,23 +82,23 @@ Hint Unfold oo_ atom_ T_: hybrid.
 Inductive prog : atm -> oo_ -> Prop :=
   (* well-formedness of terms (app and lam) *)
   | tm_a : forall M N:uexp,
-      prog (is_tm (app M N))
-        (Conj (atom_ (is_tm M)) (atom_ (is_tm N)))
+      prog (term (app M N))
+        (Conj (atom_ (term M)) (atom_ (term N)))
   | tm_l : forall M:uexp->uexp, abstr M ->
-      prog (is_tm (lam M))
+      prog (term (lam M))
         (All (fun x:uexp =>
-          (Imp (is_tm x) (atom_ (is_tm (M x))))))
+          (Imp (term x) (atom_ (term (M x))))))
   (* declarative equality *)
   | de_l :forall M N:uexp->uexp, abstr M -> abstr N ->
       prog (deq (lam M) (lam N))
         (All (fun x:uexp =>
-          (Imp (is_tm x)
+          (Imp (term x)
             (Imp (deq x x) (atom_ (deq (M x) (N x)))))))
   | de_a : forall M1 M2 N1 N2:uexp,
       prog (deq (app M1 M2) (app N1 N2))
         (Conj (atom_ (deq M1 N1)) (atom_ (deq M2 N2)))
   | de_r : forall M:uexp, 
-      prog (deq M M) (atom_ (is_tm M))
+      prog (deq M M) (atom_ (term M))
   | de_s : forall M1 M2:uexp, 
       prog (deq M2 M1) (atom_ (deq M1 M2))
   | de_t : forall M1 M2 M3:uexp,
@@ -149,11 +149,11 @@ Section ctx_refl.
 Inductive xaG : list atm -> Prop :=
 | nil_xa : xaG nil
 | cons_xa : forall (Phi_xa:list atm) (x:uexp), proper x ->
-    xaG Phi_xa -> xaG (is_tm x::aeq x x::Phi_xa).
+    xaG Phi_xa -> xaG (term x::aeq x x::Phi_xa).
 
 (* Context Membership *)
 Lemma memb_refl : forall (Phi_xa:list atm) (T:uexp),
-  xaG Phi_xa -> In (is_tm T) Phi_xa -> In (aeq T T) Phi_xa.
+  xaG Phi_xa -> In (term T) Phi_xa -> In (aeq T T) Phi_xa.
 Proof.
 intros Phi_xa; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
@@ -215,11 +215,11 @@ Qed.
 
 Lemma d_str_xa2a_aeq :
   forall (i:nat) (T T' x:uexp) (Gamma:list atm),
-  seq_ i (is_tm x::aeq x x::Gamma) (atom_ (aeq T T')) ->
+  seq_ i (term x::aeq x x::Gamma) (atom_ (aeq T T')) ->
   seq_ i (aeq x x::Gamma) (atom_ (aeq T T')).
 Proof.
 intros i T T' x Gamma h.
-apply aeq_strengthen_weaken with (is_tm x::aeq x x::Gamma); auto.
+apply aeq_strengthen_weaken with (term x::aeq x x::Gamma); auto.
 clear h T T' i.
 intros T T'; simpl; split.
 intros [h1 | [h1 | h1]]; try discriminate h1; auto.
@@ -238,7 +238,7 @@ Hint Resolve nil_xa cons_xa memb_refl : hybrid.
 
 Lemma aeq_refl :
   forall (i:nat) (T:uexp) (Phi_xa:list atm), xaG Phi_xa ->
-  seq_ i Phi_xa (atom_ (is_tm T)) ->
+  seq_ i Phi_xa (atom_ (term T)) ->
   seq_ i Phi_xa (atom_ (aeq T T)).
 Proof.
 intro i.
@@ -247,7 +247,7 @@ generalize
     (fun i:nat =>
      forall (T:uexp) (Phi_xa:list atm),
      xaG Phi_xa ->
-     seq_ i Phi_xa (atom_ (is_tm T)) ->
+     seq_ i Phi_xa (atom_ (term T)) ->
      seq_ i Phi_xa (atom_ (aeq T T)))).
 intro H'.
 apply H'; clear H' i; auto.
@@ -276,14 +276,14 @@ inversion h2; subst; clear h2.
 apply s_imp; auto.
 apply d_str_xa2a_aeq; auto.
 apply h; eauto with hybrid; try omega.
-apply seq_thin_exch with (is_tm x::Phi_xa); auto.
+apply seq_thin_exch with (term x::Phi_xa); auto.
 intro a; simpl; tauto.
 (* context case *)
 apply s_init; eauto with hybrid. (* applies memb_refl *)
 Qed.
 
 Lemma aeq_refl_cor :
-  forall (T:uexp), seq0 (atom_ (is_tm T)) -> seq0 (atom_ (aeq T T)).
+  forall (T:uexp), seq0 (atom_ (term T)) -> seq0 (atom_ (aeq T T)).
 Proof.
 intros T [n h].
 assert (h1:xaG nil); eauto with hybrid.
@@ -479,12 +479,12 @@ Lemma de_l_inv :
 forall (i:nat) (Psi:list atm) (T T':uexp->uexp),
 (forall x : uexp,
        proper x ->
-       seq_ i Psi (Imp (is_tm x) (Imp (deq x x)
+       seq_ i Psi (Imp (term x) (Imp (deq x x)
                    (atom_ (deq (T x) (T' x)))))) ->
 exists j:nat, (i=j+2 /\ 
  forall x : uexp,
        proper x ->
-       seq_ j ((deq x x)::(is_tm x)::Psi) (atom_ (deq (T x) (T' x)))).
+       seq_ j ((deq x x)::(term x)::Psi) (atom_ (deq (T x) (T' x)))).
 Proof.
 induction i; auto.
 intros Psi T T' H.
@@ -522,7 +522,7 @@ Inductive daG : list atm -> Prop :=
 | nil_da : daG nil
 | cons_da : forall (Gamma:list atm) (x:uexp),
     proper x -> daG Gamma ->
-    daG (is_tm x::deq x x::aeq x x::Gamma).
+    daG (term x::deq x x::aeq x x::Gamma).
 
 (* Membership Lemma *)
 Lemma memb_ceq : forall (Gamma:list atm) (T T':uexp),
@@ -539,18 +539,18 @@ Qed.
 
 Lemma term_strengthen_weaken :
   forall (i:nat) (T:uexp) (Phi Psi:list atm),
-  (forall (T:uexp), In (is_tm T) Phi <->  In (is_tm T) Psi) ->
-  seq_ i Phi (atom_ (is_tm T)) ->
-  seq_ i Psi (atom_ (is_tm T)).
+  (forall (T:uexp), In (term T) Phi <->  In (term T) Psi) ->
+  seq_ i Phi (atom_ (term T)) ->
+  seq_ i Psi (atom_ (term T)).
 Proof.
 intro i.
 generalize
  (lt_wf_ind i
     (fun i:nat =>
      forall (T:uexp) (Phi Psi:list atm),
-     (forall (T:uexp), In (is_tm T ) Phi <->  In (is_tm T) Psi) ->
-     seq_ i Phi (atom_ (is_tm T)) ->
-     seq_ i Psi (atom_ (is_tm T)))).
+     (forall (T:uexp), In (term T ) Phi <->  In (term T) Psi) ->
+     seq_ i Phi (atom_ (term T)) ->
+     seq_ i Psi (atom_ (term T)))).
 intro H'.
 apply H'; clear H' i; auto.
 intros i h T Phi Psi h1 h2.
@@ -563,20 +563,20 @@ generalize h; intro h'.
 specialize h with (1:=hi) (2:=h1) (3:=H4).
 specialize h' with (1:=hi) (2:=h1) (3:=H5).
 unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (is_tm M)) (atom_ (is_tm N)));
+  apply s_bc with (Conj (atom_ (term M)) (atom_ (term N)));
   auto with hybrid.
 apply s_and; auto.
 (* lam case *)
 inversion H3; subst; clear H3.
 unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (is_tm x) (atom_ (is_tm (M x))))));
+  (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
   auto with hybrid.
 apply s_all; auto.
 intros x h5.
 generalize (H4 x h5); intro h6.
 inversion h6; subst; clear h6 H4.
 apply s_imp; auto.
-apply h with (is_tm x::Phi); auto; try omega.
+apply h with (term x::Phi); auto; try omega.
 (* proof of extended context inv *)
 intro T; generalize (h1 T); simpl; tauto.
 (* context case *)
@@ -590,11 +590,11 @@ Qed.
 
 Lemma d_str_da2a_aeq :
   forall (i:nat) (T T' x:uexp) (Gamma:list atm),
-  seq_ i (is_tm x::deq x x::aeq x x::Gamma) (atom_ (aeq T T')) ->
+  seq_ i (term x::deq x x::aeq x x::Gamma) (atom_ (aeq T T')) ->
   seq_ i (aeq x x::Gamma) (atom_ (aeq T T')).
 Proof.
 intros i T T' x Gamma h.
-apply aeq_strengthen_weaken with (is_tm x::deq x x::aeq x x::Gamma); auto.
+apply aeq_strengthen_weaken with (term x::deq x x::aeq x x::Gamma); auto.
 clear h T T' i.
 intros T T'; simpl; split.
 intros [h1 | [h1 | [h1 | h1]]]; try discriminate h1; auto.
@@ -612,8 +612,8 @@ Section promote_refl.
 Fixpoint rm_da2xa (l:list atm) {struct l} : list atm
   := match l with
        nil => nil
-     | (is_tm z::deq x y::aeq x' y'::l') => 
-                    (is_tm z::aeq x' y'::rm_da2xa l')
+     | (term z::deq x y::aeq x' y'::l') => 
+                    (term z::aeq x' y'::rm_da2xa l')
      | _ => nil
      end.
 
@@ -633,7 +633,7 @@ Qed.
 Lemma rm_da2xa_lem_term :
   forall (T:uexp) (Gamma:list atm),
   daG Gamma ->
-  (In (is_tm T) Gamma <-> In (is_tm T) (rm_da2xa Gamma)).
+  (In (term T) Gamma <-> In (term T) (rm_da2xa Gamma)).
 Proof.
 intros T Gamma; induction 1.
 simpl; tauto.
@@ -670,8 +670,8 @@ Hint Resolve rm_da2xa_lem_term : hybrid.
 Lemma c_str_da2xa_term :
   forall (i:nat) (T:uexp) (Gamma:list atm),
   daG Gamma ->
-  seq_ i Gamma (atom_ (is_tm T)) ->
-  seq_ i (rm_da2xa Gamma) (atom_ (is_tm T)).
+  seq_ i Gamma (atom_ (term T)) ->
+  seq_ i (rm_da2xa Gamma) (atom_ (term T)).
 Proof.
 intros i T Gamma h1 h2.
 apply term_strengthen_weaken with Gamma; eauto with hybrid.
@@ -683,7 +683,7 @@ Hint Resolve c_wk_da2xa_aeq aeq_refl daG2xaG_strengthen
 (* Promotion Lemma for Reflexivity *)
 Lemma refl_promote :
   forall (i:nat) (T:uexp) (Gamma:list atm), daG Gamma ->
-  seq_ i Gamma (atom_ (is_tm T)) ->
+  seq_ i Gamma (atom_ (term T)) ->
   seq_ i Gamma (atom_ (aeq T T)).
 Proof.
 intros i T Gamma h h2; eauto with hybrid.
@@ -700,7 +700,7 @@ Section promote_symm_tr.
 Fixpoint rm_da2a (l:list atm) {struct l} : list atm
   := match l with
        nil => nil
-     | (is_tm z::deq x y::aeq x' y'::l') => (aeq x' y'::rm_da2a l')
+     | (term z::deq x y::aeq x' y'::l') => (aeq x' y'::rm_da2a l')
      | _ => nil
      end.
 
@@ -830,7 +830,7 @@ apply seq_mono with (j+1); try omega.
 apply s_imp; auto.
 apply d_str_da2a_aeq; auto.
 apply h; eauto with hybrid; try omega.
-apply seq_thin_exch with (deq x x::is_tm x::Gamma); eauto with hybrid.
+apply seq_thin_exch with (deq x x::term x::Gamma); eauto with hybrid.
 intro a; simpl; tauto.
 apply h2; auto.
 (* app case *)
@@ -914,14 +914,14 @@ End ae_inv.
 Section proper_adeq.
 
 Lemma term_proper : forall T:uexp,
-  seq0 (atom_ (is_tm T)) -> (proper T).
+  seq0 (atom_ (term T)) -> (proper T).
 Proof.
 intros T [n h1].
 generalize T h1; clear h1 T.
 generalize
  (lt_wf_ind n
     (fun n:nat =>
-       forall T : uexp, seq_ n nil (atom_ (is_tm T)) -> proper T)).
+       forall T : uexp, seq_ n nil (atom_ (term T)) -> proper T)).
 intro h'.
 apply h'; clear h'; auto.
 clear n.
@@ -1016,7 +1016,7 @@ Section ctx_aeq_adeq.
 
 (* Membership lemma used in adequacy of aeq *)
 Lemma memb_aeq_adeq1 : forall (Gamma:list atm) (T T':uexp),
-  xaG Gamma -> In (aeq T T') Gamma -> In (is_tm T) Gamma.
+  xaG Gamma -> In (aeq T T') Gamma -> In (term T) Gamma.
 Proof.
 intros Gamma T T'; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
@@ -1027,7 +1027,7 @@ Qed.
 
 (* Membership lemma used in adequacy of aeq *)
 Lemma memb_aeq_adeq2 : forall (Gamma:list atm) (T T':uexp),
-  xaG Gamma -> In (aeq T T') Gamma -> In (is_tm T') Gamma.
+  xaG Gamma -> In (aeq T T') Gamma -> In (term T') Gamma.
 Proof.
 intros Gamma; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
@@ -1038,11 +1038,11 @@ Qed.
 
 Lemma d_str_xa2x_term :
   forall (i:nat) (T x:uexp) (Gamma:list atm),
-  seq_ i (is_tm x::aeq x x::Gamma) (atom_ (is_tm T)) ->
-  seq_ i (is_tm x::Gamma) (atom_ (is_tm T)).
+  seq_ i (term x::aeq x x::Gamma) (atom_ (term T)) ->
+  seq_ i (term x::Gamma) (atom_ (term T)).
 Proof.
 intros i T x Gamma h.
-apply term_strengthen_weaken with (is_tm x::aeq x x::Gamma); auto.
+apply term_strengthen_weaken with (term x::aeq x x::Gamma); auto.
 clear h T i.
 intro T; simpl; split.
 intros [h1 | [h1 | h1]]; auto.
@@ -1064,7 +1064,7 @@ Lemma aeq_term :
   forall (i:nat) (T T':uexp) (Gamma:list atm),
   xaG Gamma ->
   seq_ i Gamma (atom_ (aeq T T')) ->
-  seq_ i Gamma (atom_ (is_tm T)) /\ seq_ i Gamma (atom_ (is_tm T')).
+  seq_ i Gamma (atom_ (term T)) /\ seq_ i Gamma (atom_ (term T')).
 Proof.
 intro i.
 generalize
@@ -1073,7 +1073,7 @@ generalize
      forall (T T':uexp) (Gamma:list atm),
      xaG Gamma ->
      seq_ i Gamma (atom_ (aeq T T')) ->
-     seq_ i Gamma (atom_ (is_tm T)) /\ seq_ i Gamma (atom_ (is_tm T')))).
+     seq_ i Gamma (atom_ (term T)) /\ seq_ i Gamma (atom_ (term T')))).
 intro H'.
 apply H'; clear H' i; auto.
 intros i h T T' Gamma cInv h1.
@@ -1084,8 +1084,8 @@ inversion H3; subst; clear H3.
 generalize (ae_l_inv i Gamma M N H4); clear H4; intros [j [h1 h2]];
  subst.
 assert (h':forall x:uexp, proper x -> 
-        (seq_ j (is_tm x::aeq x x::Gamma) (atom_ (is_tm (M x))) /\
-         seq_ j (is_tm x::aeq x x::Gamma) (atom_ (is_tm (N x))))).
+        (seq_ j (term x::aeq x x::Gamma) (atom_ (term (M x))) /\
+         seq_ j (term x::aeq x x::Gamma) (atom_ (term (N x))))).
 intros x h1.
 apply h; eauto with hybrid; try omega.
 apply seq_thin_exch with (aeq x x::Gamma); auto.
@@ -1093,7 +1093,7 @@ intro a; simpl; tauto.
 apply h2; auto.
 split.
 unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (is_tm x) (atom_ (is_tm (M x))))));
+  (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
   auto with hybrid.
 apply s_all; auto.
 intros x h5.
@@ -1101,7 +1101,7 @@ apply s_imp; auto.
 specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
 apply d_str_xa2x_term; auto.
 unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (is_tm x) (atom_ (is_tm (N x))))));
+  (All (fun x:uexp => (Imp (term x) (atom_ (term (N x))))));
   auto with hybrid.
 apply s_all; auto.
 intros x h5.
@@ -1117,11 +1117,11 @@ specialize h' with (1:=hi) (2:=cInv) (3:=H5).
 elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
 split.
 unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (is_tm M1)) (atom_ (is_tm M2)));
+  apply s_bc with (Conj (atom_ (term M1)) (atom_ (term M2)));
   auto with hybrid.
 apply s_and; auto.
 unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (is_tm N1)) (atom_ (is_tm N2)));
+  apply s_bc with (Conj (atom_ (term N1)) (atom_ (term N2)));
   auto with hybrid.
 apply s_and; auto.
 (* context case *)
@@ -1130,7 +1130,7 @@ split; apply s_init; eauto with hybrid.
 Qed.
 
 Lemma aeq_term_cor : forall T T':uexp, seq0 (atom_ (aeq T T')) ->
-  (seq0 (atom_ (is_tm T)) /\ seq0 (atom_ (is_tm T'))).
+  (seq0 (atom_ (term T)) /\ seq0 (atom_ (term T'))).
 Proof.
 intros T T' [n h].
 assert (h1:xaG nil); eauto with hybrid.
@@ -1151,11 +1151,11 @@ Inductive dxG : list atm -> Prop :=
 | nil_dx : dxG nil
 | cons_dx : forall (Gamma:list atm) (x:uexp), proper x ->
     dxG Gamma ->
-    dxG (deq x x::is_tm x::Gamma).
+    dxG (deq x x::term x::Gamma).
 
 (* Membership lemma used in adequacy of deq *)
 Lemma memb_deq_adeq1 : forall (Gamma:list atm) (T T':uexp),
-  dxG Gamma -> In (deq T T') Gamma -> In (is_tm T) Gamma.
+  dxG Gamma -> In (deq T T') Gamma -> In (term T) Gamma.
 Proof.
 intros Gamma T T'; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
@@ -1166,7 +1166,7 @@ Qed.
 
 (* Membership lemma used in adequacy of deq *)
 Lemma memb_deq_adeq2 : forall (Gamma:list atm) (T T':uexp),
-  dxG Gamma -> In (deq T T') Gamma -> In (is_tm T') Gamma.
+  dxG Gamma -> In (deq T T') Gamma -> In (term T') Gamma.
 Proof.
 intros Gamma; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
@@ -1178,11 +1178,11 @@ Qed.
 (* used in adequacy of deq *)
 Lemma d_str_dx2x_term :
   forall (i:nat) (T x:uexp) (Gamma:list atm),
-  seq_ i (deq x x::is_tm x :: Gamma) (atom_ (is_tm T)) ->
-  seq_ i (is_tm x :: Gamma) (atom_ (is_tm T)).
+  seq_ i (deq x x::term x :: Gamma) (atom_ (term T)) ->
+  seq_ i (term x :: Gamma) (atom_ (term T)).
 Proof.
 intros i T x Gamma h.
-apply term_strengthen_weaken with (deq x x::is_tm x::Gamma); auto.
+apply term_strengthen_weaken with (deq x x::term x::Gamma); auto.
 clear h T i.
 intro T; simpl; split.
 intros [h1 | [h1 | h1]]; try discriminate h1; auto.
@@ -1204,7 +1204,7 @@ Lemma deq_term :
   forall (i:nat) (T T':uexp) (Gamma:list atm),
   dxG Gamma ->
   seq_ i Gamma (atom_ (deq T T')) ->
-  seq_ i Gamma (atom_ (is_tm T)) /\ seq_ i Gamma (atom_ (is_tm T')).
+  seq_ i Gamma (atom_ (term T)) /\ seq_ i Gamma (atom_ (term T')).
 Proof.
 intro i.
 generalize
@@ -1213,7 +1213,7 @@ generalize
      forall (T T':uexp) (Gamma:list atm),
      dxG Gamma ->
      seq_ i Gamma (atom_ (deq T T')) ->
-     seq_ i Gamma (atom_ (is_tm T)) /\ seq_ i Gamma (atom_ (is_tm T')))).
+     seq_ i Gamma (atom_ (term T)) /\ seq_ i Gamma (atom_ (term T')))).
 intro H'.
 apply H'; clear H' i; auto.
 intros i h T T' Gamma cInv h1.
@@ -1225,14 +1225,14 @@ generalize (de_l_inv i Gamma M N H4); clear H4; intros [j [h1 h2]];
  subst.
 replace (j+2) with (j+1+1); try omega.
 assert (h':forall x:uexp, proper x -> 
-        (seq_ j (deq x x::is_tm x::Gamma) (atom_ (is_tm (M x))) /\
-         seq_ j (deq x x::is_tm x::Gamma) (atom_ (is_tm (N x))))).
+        (seq_ j (deq x x::term x::Gamma) (atom_ (term (M x))) /\
+         seq_ j (deq x x::term x::Gamma) (atom_ (term (N x))))).
 intros x h1.
 apply h; eauto with hybrid; try omega.
 eauto with hybrid.
 split.
 unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (is_tm x) (atom_ (is_tm (M x))))));
+  (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
   auto with hybrid.
 apply s_all; auto.
 intros x h5.
@@ -1241,7 +1241,7 @@ apply seq_mono with j; auto; try omega.
 specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
 apply d_str_dx2x_term; auto.
 unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (is_tm x) (atom_ (is_tm (N x))))));
+  (All (fun x:uexp => (Imp (term x) (atom_ (term (N x))))));
   auto with hybrid.
 apply s_all; auto.
 intros x h5.
@@ -1258,11 +1258,11 @@ specialize h' with (1:=hi) (2:=cInv) (3:=H5).
 elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
 split.
 unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (is_tm M1)) (atom_ (is_tm M2)));
+  apply s_bc with (Conj (atom_ (term M1)) (atom_ (term M2)));
   auto with hybrid.
 apply s_and; auto.
 unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (is_tm N1)) (atom_ (is_tm N2)));
+  apply s_bc with (Conj (atom_ (term N1)) (atom_ (term N2)));
   auto with hybrid.
 apply s_and; auto.
 (* refl case *)
@@ -1285,7 +1285,7 @@ split; apply s_init; eauto with hybrid.
 Qed.
 
 Lemma deq_term_cor : forall T T':uexp, seq0 (atom_ (deq T T')) ->
-  (seq0 (atom_ (is_tm T)) /\ seq0 (atom_ (is_tm T'))).
+  (seq0 (atom_ (term T)) /\ seq0 (atom_ (term T'))).
 Proof.
 intros T T' [n h].
 assert (h1:dxG nil); eauto with hybrid.

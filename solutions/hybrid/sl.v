@@ -3,7 +3,7 @@
    File: sl.v                                                 
    Authors: Amy Felty
    Date: May 2009
-   Current Version: Coq V8.4pl2
+   Current Coq Version: V8.7.1
                                                                  
    An intuitionistic sequent calculus used as a specification
    logic, for use in two-level Hybrid.  See:
@@ -20,7 +20,7 @@ Section sl.
 Set Implicit Arguments.
 
 (****************************************************************
-   The intuitionistic object logic.
+   The intuitionistic specification logic.
   ****************************************************************)
 Variable atm : Set.
 Variable con : Set.

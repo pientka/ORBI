@@ -3,8 +3,12 @@
    File: Hybrid.v                                                 
    Authors: Amy Felty
    Date: May 2009
-   Current Version: Coq V8.4pl2
-                                                                 
+
+   Current Coq Version: V8.7.1 (also updated ext_eq relation and
+   morphisms to use current version of generalized rewriting, i.e.,
+   setoids, as described in the "Generalized Rewriting" chapter of
+   the reference manual)
+                                                                
    The main library, described in:
 
    Amy Felty and Alberto Momigliano, "Hybrid: A Definitional Two Level
@@ -175,7 +179,7 @@ Fixpoint insts (i:bnd)(xs:elist)(e:expr) {struct e} : expr
   Extensional equality of expr->expr
  ********************************************************************)
 Definition ext_eq (f g: expr -> expr) := forall x:expr,
-  proper x -> f x = g x.
+    proper x -> f x = g x.
 
 Lemma ext_eq_refl : forall x : expr -> expr, ext_eq x x.
 Proof.
@@ -200,11 +204,11 @@ specialize H1 with (1:=h1); specialize H2 with (1:=h1).
 rewrite -> H1 in H2; auto.
 Qed.
 
-Definition ext_eq_S : Setoid_Theory (expr -> expr) ext_eq.
-split; [exact ext_eq_refl | exact ext_eq_symm | exact ext_eq_trans].
-Qed.
-
-Add Setoid (expr -> expr) ext_eq ext_eq_S as ext_eq_setoid.
+Add Parametric Relation : (expr -> expr) ext_eq
+  reflexivity proved by ext_eq_refl
+  symmetry proved by ext_eq_symm
+  transitivity proved by ext_eq_trans
+  as ext_eq_S.
 
 Lemma ext_eq_eta : forall (e:expr -> expr), ext_eq e (fun x => e x).
 Proof.
@@ -488,18 +492,18 @@ Lemma lbnd_APP_inv : forall (i:bnd) (t: expr) (e f g: expr -> expr),
   t=(APP s' t')).
 Proof.
 unfold lbnd.
-intros i t e f g H [e'].
+intros i t e f g H.
 setoid_rewrite -> H; clear H e.
-intros [H]; destruct 1.
-generalize (H (VAR 0) (proper_VAR 0)); discriminate 1.
-generalize (H (VAR 0) (proper_VAR 0)); discriminate 1.
-generalize (H (VAR 0) (proper_VAR 0)); discriminate 1.
-generalize (H (VAR 0) (proper_VAR 0)); discriminate 1.
+intros [H]. destruct H0. destruct H1.
+generalize (H0 (VAR 0) (proper_VAR 0)); discriminate 1.
+generalize (H0 (VAR 0) (proper_VAR 0)); discriminate 1.
+generalize (H0 (VAR 0) (proper_VAR 0)); discriminate 1.
+generalize (H0 (VAR 0) (proper_VAR 0)); discriminate 1.
 exists s; exists t; repeat split; auto.
 exists f0; split; auto; apply ext_eq_APP_elim1 with g0 g; auto.
 exists g0; split; auto; apply ext_eq_APP_elim2 with f0 f; auto.
-generalize (H (VAR 0) (proper_VAR 0)); discriminate 1.
-elim H0; unfold ordinary.
+generalize (H0 (VAR 0) (proper_VAR 0)); discriminate 1.
+elim H; unfold ordinary.
 right; right; right; right; left; exists f; exists g; auto.
 Qed.
 
@@ -509,14 +513,14 @@ Lemma lbnd_ABS_inv : forall (i:bnd) (t: expr) (e f: expr -> expr),
   (exists s:expr, (lbnd (i+1) f s) /\ t=(ABS s)).
 Proof.
 unfold lbnd.
-intros i t e f H [e'].
-setoid_rewrite -> H; clear H e.
-intros [H]; destruct 1;
-  try (unfold ext_eq in H; specialize H with (1:=(proper_VAR 0));
-       discriminate H); auto.
+intros i t e f H.
+setoid_rewrite -> H ; clear H e.
+intros [H]. destruct H0. destruct H1;
+  try (unfold ext_eq in H0; specialize H0 with (1:=(proper_VAR 0));
+       discriminate H0); auto.
 exists s; split; auto.
 exists f0; split; auto; apply ext_eq_ABS; auto.
-elim H0; unfold ordinary.
+elim H; unfold ordinary.
 right; right; right; right; right; exists f; auto.
 Qed.
 
@@ -536,80 +540,117 @@ Qed.
   extensional equality and morphisms
  ********************************************************************)
 
+Lemma abst_compat : forall (i:bnd) (e e':expr -> expr),
+  (ext_eq e e') -> (abst i e) <-> (abst i e').
+Proof.
+  unfold abst. intros i e e' H. split.
+  - intros [e'' [H0 H1]].
+    exists e''; split; auto.
+    rewrite -> H0; auto with Ext_Eq.
+  - intros [e'' [H0 H1]].
+    exists e''; split; auto.
+    rewrite -> H; auto with Ext_Eq.
+Qed.
+
 Lemma abst_ext_eq : forall (i:bnd) (e e':expr -> expr),
   (ext_eq e e') -> (abst i e) -> (abst i e').
 Proof.
-unfold abst.
-intros i e e' H [e'' [H0 H1]].
-exists e''; split; auto.
-setoid_rewrite -> H0; auto with Ext_Eq.
+  apply abst_compat; auto.
 Qed.
 
-Add Morphism abst : abst_ext_eq'.
+Add Parametric Morphism : abst with
+      signature eq ==> ext_eq ==> iff as abst_ext_eq'.
 Proof.
-intros b e e0 H; split; intro H0.
-apply abst_ext_eq with e; auto.
-apply abst_ext_eq with e0; auto.
-setoid_rewrite -> H; auto with Ext_Eq.
+  apply abst_compat; auto.
+Qed.
+
+Lemma abstr_compat : forall (e e':expr -> expr),
+  (ext_eq e e') -> (abstr e) <-> (abstr e').
+Proof.
+  unfold abstr.
+  intros e e' H; split; intro H0.
+  - apply abst_ext_eq with e; auto.
+  - apply abst_ext_eq with e'; auto.
+    rewrite -> H; auto with Ext_Eq.
 Qed.
 
 Lemma abstr_ext_eq : forall (e e':expr -> expr),
   (ext_eq e e') -> (abstr e) -> (abstr e').
 Proof.
-unfold abstr.
-intros e e' H H0; apply abst_ext_eq with e; auto.
+  apply abstr_compat; auto.
 Qed.
 
-Add Morphism abstr : abstr_ext_eq'.
+Add Parametric Morphism : abstr with
+      signature ext_eq ==> iff as abstr_ext_eq'.
 Proof.
-intros e e' H; split; intro H0.
-apply abstr_ext_eq with e; auto.
-apply abstr_ext_eq with e'; auto.
-setoid_rewrite -> H; auto with Ext_Eq.
+  apply abstr_compat; auto.
+Qed.
+
+Lemma ordinary_compat : forall (e e' : expr -> expr),
+  (ext_eq e e') -> (ordinary e) <-> (ordinary e').
+Proof.
+  unfold ordinary.
+  intros e e' H; split;
+    intros [[a H0] | [H0 | [[n H0] | [[j H0] | [[f [g H0]] | [f H0]]]]]].
+  - left.
+    exists a; rewrite <- H; auto.
+  - right; left.
+    rewrite <- H; auto.
+  - right; right; left.
+    exists n; rewrite <- H; auto.
+  - right; right; right; left.
+    exists j; rewrite <- H; auto.
+  - right; right; right; right; left.
+    exists f; exists g; rewrite <- H; auto.
+  - right; right; right; right; right.
+    exists f; rewrite <- H; auto.
+  - left.
+    exists a; rewrite -> H; auto.
+  - right; left.
+    rewrite -> H; auto.
+  - right; right; left.
+    exists n; rewrite -> H; auto.
+  - right; right; right; left.
+    exists j; rewrite -> H; auto.
+  - right; right; right; right; left.
+    exists f; exists g; rewrite -> H; auto.
+  - right; right; right; right; right.
+    exists f; rewrite -> H; auto.
 Qed.
 
 Lemma ordinary_ext_eq : forall (e e' : expr -> expr),
   (ext_eq e e') -> (ordinary e) -> (ordinary e').
 Proof.
-unfold ordinary.
-intros e e' H [[a H0] | [H0 | [[n H0] | [[j H0] | [[f [g H0]] | [f H0]]]]]].
-left.
-exists a; setoid_rewrite <- H; auto.
-right; left.
-setoid_rewrite <- H; auto.
-right; right; left.
-exists n; setoid_rewrite <- H; auto.
-right; right; right; left.
-exists j; setoid_rewrite <- H; auto.
-right; right; right; right; left.
-exists f; exists g; setoid_rewrite <- H; auto.
-right; right; right; right; right.
-exists f; setoid_rewrite <- H; auto.
+  apply ordinary_compat; auto.
 Qed.
 
-Add Morphism ordinary : ordinary_ext_eq'.
+Add Parametric Morphism : ordinary with
+      signature ext_eq ==> iff as ordinary_ext_eq'.
 Proof.
-intros e e' H; split; intro H0.
-apply ordinary_ext_eq with e; auto.
-apply ordinary_ext_eq with e'; auto.
-setoid_rewrite -> H; auto with Ext_Eq.
+  apply ordinary_compat; auto.
+Qed.
+
+Lemma lbnd_compat : forall (i:bnd) (e e' : expr -> expr) (t:expr),
+  (ext_eq e e') -> (lbnd i e t) <-> (lbnd i e' t).
+Proof.
+  unfold lbnd.
+  intros i e e' t H; split; intros [e'' [H0 H1]].
+  - exists e''; split; auto with Ext_Eq.
+    rewrite -> H0; auto.
+  - exists e''; split; auto with Ext_Eq.
+    rewrite -> H; auto with Ext_Eq.
 Qed.
 
 Lemma lbnd_ext_eq : forall (i:bnd) (e e' : expr -> expr) (t:expr),
   (ext_eq e e') -> (lbnd i e t) -> (lbnd i e' t).
 Proof.
-unfold lbnd.
-intros i e e' t H [e'' [H0 H1]].
-exists e''; split; auto with Ext_Eq.
-setoid_rewrite -> H0; auto.
+  apply lbnd_compat.
 Qed.
 
-Add Morphism lbnd : lbnd_ext_eq'.
+Add Parametric Morphism : lbnd with
+    signature eq ==> ext_eq ==> eq ==> iff as lbnd_ext_eq'.
 Proof.
-intros b e e0 H e1; split; intro H0.
-apply lbnd_ext_eq with e; auto.
-apply lbnd_ext_eq with e0; auto.
-setoid_rewrite -> H; auto with Ext_Eq.
+  intros; apply lbnd_compat; auto.
 Qed.
 
 (********************************************************************
@@ -1582,6 +1623,24 @@ assert (h4: (size (lbind (j+1) f) = size (f (VAR con n)))).
 apply IHh2; auto with Ext_Eq.
 rewrite h4; auto.
 apply proper_VAR; auto.
+Qed.
+
+Theorem eq_ext_double:
+  forall (f g: expr con -> expr con -> expr con),
+    (forall x, proper x ->  abstr (f x)) -> 
+    (forall x, proper x ->  abstr (g x)) -> 
+    abstr (fun x => lambda (f x)) -> 
+    abstr (fun x => lambda (g x)) -> 
+    lbind 0 (fun x  => lambda (f x)) =
+    lbind 0 (fun x => lambda (g x)) ->
+    forall x1, proper x1  -> ext_eq (f x1)  (g x1).
+Proof.
+  intros f g H H0 H1 H2 H3 x1 H4.
+  apply abst_lbind_one_to_one with 0; unfold abstr in H,H0; auto.
+  apply abstr_lbind_simp in H3; unfold abstr in H,H0; auto.
+  unfold ext_eq in H3.
+  apply H3 in H4. unfold lambda in H4. inversion H4.
+  auto.
 Qed.
 
 (********************************************************************
