@@ -1,14 +1,18 @@
-The files run in Coq V8.7.1
+- The files run in Coq V8.13.1
+
+- To compile all files do:
+
+  coq_makefile -f _CoqProject -o Makefile
+  make
 
 --------------------
 The Hybrid Libraries
 --------------------
 
 The Coq version of Hybrid is implemented as the following files, which
-are used in all of the examples that follow, and must be compiled in
-the order they appear.
+are used in all of the examples that follow.
  	
-- Hybrid.v: the main library
+- Hybrid.v: the main syntax library
 - sl.v: specification logic used in the benchmark problems (fragment
   of 2nd-order minimal logic)
 

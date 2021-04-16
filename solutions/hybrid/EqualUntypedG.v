@@ -2,8 +2,9 @@
 
    File: EqualUntypedG.v
    Author: Amy Felty
-   Current Coq Version: V8.7.1
-   January 2014
+
+   original: January 2014
+   Apr 2021: Current Coq Version: V8.13.1
 
    Generalized context version (G version) of:
    1. Admissibility of reflexivity for algorithmic equality
@@ -14,7 +15,11 @@
 
   ***************************************************************)
 
-Require Import sl.
+From HybridSys Require Export sl.
+
+#[global] Hint Resolve level_CON level_VAR level_BND level_APP level_ABS : hybrid.
+#[global] Hint Resolve proper_APP abstr_proper : hybrid.
+#[global] Hint Unfold proper: hybrid.
 
 Section encoding.
 
@@ -36,11 +41,6 @@ Definition lam : (uexp -> uexp) -> uexp :=
    Some Properties of Constructors
   ****************************************************************)
 
-Hint Resolve level_CON level_VAR level_BND level_APP level_ABS : hybrid.
-Hint Resolve proper_APP abstr_proper : hybrid.
-Hint Unfold proper: hybrid.
-Hint Rewrite ext_eq_eta : hybrid.
-
 Lemma proper_Var: forall x:var, (proper (Var x)).
 Proof.
 unfold Var; auto with hybrid.
@@ -58,8 +58,6 @@ Proof.
 unfold app; auto with hybrid.
 Qed.
 
-Hint Resolve proper_Var : hybrid.
-
 (****************************************************************
    The atm type and instantiation of oo.
   ****************************************************************)
@@ -72,8 +70,6 @@ Inductive atm : Set :=
 Definition oo_ := oo atm Econ.
 Definition atom_ : atm -> oo_ := atom Econ.
 Definition T_ : oo_ := T atm Econ.
-
-Hint Unfold oo_ atom_ T_: hybrid.
 
 (****************************************************************
    Definition of prog
@@ -112,8 +108,6 @@ Inductive prog : atm -> oo_ -> Prop :=
       prog (aeq (app M1 M2) (app N1 N2))
         (Conj (atom_ (aeq M1 N1)) (atom_ (aeq M2 N2))).
 
-Hint Resolve tm_a tm_l de_l de_a de_r de_s de_t ae_l ae_a : hybrid.
-
 (****************************************************************
    Instantiation of seq
   ****************************************************************)
@@ -122,18 +116,12 @@ Definition seq_ : nat -> list atm -> oo_ -> Prop := seq prog.
 Definition seq'_ := seq' prog.
 Definition seq0 (B : oo_) : Prop := seq'_ nil B.
 
-Hint Unfold seq_ seq'_ seq0: hybrid.
-
 End encoding.
 
-Hint Resolve level_CON level_VAR level_BND level_APP level_ABS : hybrid.
-Hint Resolve proper_APP abstr_proper : hybrid.
-Hint Unfold proper: hybrid.
-Hint Rewrite ext_eq_eta : hybrid.
-Hint Resolve proper_Var : hybrid.
-Hint Resolve tm_a tm_l de_l de_a de_r de_s de_t ae_l ae_a : hybrid.
-Hint Unfold oo_ atom_ T_: hybrid.
-Hint Unfold seq_ seq'_ seq0: hybrid.
+#[global] Hint Resolve proper_Var : hybrid.
+#[global] Hint Resolve tm_a tm_l de_l de_a de_r de_s de_t ae_l ae_a : hybrid.
+#[global] Hint Unfold oo_ atom_ T_: hybrid.
+#[global] Hint Unfold seq_ seq'_ seq0: hybrid.
 
 (****************************************************************
  1. Admissibility of Reflexivity
@@ -157,9 +145,9 @@ Lemma memb_refl : forall (Phi_xa:list atm) (T:uexp),
 Proof.
 intros Phi_xa; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
-injection h2; intros; subst; subst; simpl; auto.
-discriminate h2.
-simpl; right; auto with hybrid.
+- injection h2; intros; subst; subst; simpl; auto.
+- discriminate h2.
+- simpl; right; auto with hybrid.
 Qed.
 
 Lemma aeq_strengthen_weaken :
@@ -180,37 +168,38 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h T T' Phi Psi h1 h2.
 inversion h2; subst; clear h2.
-inversion H0; subst; clear H0.
-(* lam case *)
-inversion H3; subst; clear H3.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (N x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h5.
-generalize (H4 x h5); intro h6.
-inversion h6; subst; clear h6 H4.
-apply s_imp; auto.
-apply h with (aeq x x::Phi); auto; try omega.
-(* proof of extended context inv *)
-intros T T'; generalize (h1 T T'); simpl; tauto.
-(* app case *)
-inversion H3; subst; clear H3.
-assert (hi:i<i+1+1); try omega.
-generalize h; intro h'.
-specialize h with (1:=hi) (2:=h1) (3:=H4).
-specialize h' with (1:=hi) (2:=h1) (3:=H5).
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (aeq M1 N1)) (atom_ (aeq M2 N2)));
-  auto with hybrid.
-apply s_and; auto.
+- inversion H0; subst; clear H0.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    unfold seq_,atom_;
+      apply s_bc with
+          (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (N x))))));
+      auto with hybrid.
+    apply s_all; auto.
+    intros x h5.
+    generalize (H4 x h5); intro h6.
+    inversion h6; subst; clear h6 H4.
+    apply s_imp; auto.
+    apply h with (aeq x x::Phi); auto; try lia.
+    (* proof of extended context inv *)
+    intros T T'; generalize (h1 T T'); simpl; tauto.
+  (* app case *)
+  +inversion H3; subst; clear H3.
+   assert (hi:i<i+1+1); try lia.
+   generalize h; intro h'.
+   specialize h with (1:=hi) (2:=h1) (3:=H4).
+   specialize h' with (1:=hi) (2:=h1) (3:=H5).
+   unfold seq_,atom_;
+     apply s_bc with (Conj (atom_ (aeq M1 N1)) (atom_ (aeq M2 N2)));
+     auto with hybrid.
+   apply s_and; auto.
 (* context case *)
-destruct (h1 T T') as [h2 h3].
-generalize (h2 H2); clear h1 h2 h3 H2.
-case Psi.
-simpl; tauto.
-intros a Phi h1.
-apply s_init; auto with hybrid.
+- destruct (h1 T T') as [h2 h3].
+  generalize (h2 H2); clear h1 h2 h3 H2.
+  case Psi.
+  + simpl; tauto.
+  + intros a Phi h1.
+    apply s_init; auto with hybrid.
 Qed.
 
 Lemma d_str_xa2a_aeq :
@@ -222,8 +211,8 @@ intros i T T' x Gamma h.
 apply aeq_strengthen_weaken with (term x::aeq x x::Gamma); auto.
 clear h T T' i.
 intros T T'; simpl; split.
-intros [h1 | [h1 | h1]]; try discriminate h1; auto.
-intros [h1 | h1]; auto.
+- intros [h1 | [h1 | h1]]; try discriminate h1; auto.
+- intros [h1 | h1]; auto.
 Qed.
 
 End ctx_refl.
@@ -232,9 +221,9 @@ End ctx_refl.
 (* Main Lemmas and Theorems *)
 (****************************)
 
-Section refl.
+#[global] Hint Resolve nil_xa cons_xa memb_refl : hybrid.
 
-Hint Resolve nil_xa cons_xa memb_refl : hybrid.
+Section refl.
 
 Lemma aeq_refl :
   forall (i:nat) (T:uexp) (Phi_xa:list atm), xaG Phi_xa ->
@@ -253,33 +242,34 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h T Phi_xa gInv h1.
 inversion h1; subst; clear h1.
-inversion H0; subst; clear H0.
-(* app case *)
-inversion H3; subst; clear H3.
-assert (hi:i<i+1+1); try omega.
-generalize h; intro h'.
-specialize h with (1:=hi) (2:=gInv) (3:=H4).
-specialize h' with (1:=hi) (2:=gInv) (3:=H5).
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (aeq M M)) (atom_ (aeq N N)));
-  auto with hybrid.
-apply s_and; auto.
-(* lam case *)
-inversion H3; subst; clear H3.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (M x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h1.
-generalize (H4 x h1); intro h2.
-inversion h2; subst; clear h2.
-apply s_imp; auto.
-apply d_str_xa2a_aeq; auto.
-apply h; eauto with hybrid; try omega.
-apply seq_thin_exch with (term x::Phi_xa); auto.
-intro a; simpl; tauto.
+- inversion H0; subst; clear H0.
+  (* app case *)
+  + inversion H3; subst; clear H3.
+    assert (hi:i<i+1+1); try lia.
+    generalize h; intro h'.
+    specialize h with (1:=hi) (2:=gInv) (3:=H4).
+    specialize h' with (1:=hi) (2:=gInv) (3:=H5).
+    unfold seq_,atom_;
+      apply s_bc with (Conj (atom_ (aeq M M)) (atom_ (aeq N N)));
+      auto with hybrid.
+    apply s_and; auto.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    unfold seq_,atom_;
+      apply s_bc with
+          (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (M x))))));
+      auto with hybrid.
+    apply s_all; auto.
+    intros x h1.
+    generalize (H4 x h1); intro h2.
+    inversion h2; subst; clear h2.
+    apply s_imp; auto.
+    apply d_str_xa2a_aeq; auto.
+    apply h; eauto with hybrid; try lia.
+    apply seq_thin_exch with (term x::Phi_xa); auto.
+    intro a; simpl; tauto.
 (* context case *)
-apply s_init; eauto with hybrid. (* applies memb_refl *)
+- apply s_init; eauto with hybrid. (* applies memb_refl *)
 Qed.
 
 Lemma aeq_refl_cor :
@@ -324,9 +314,9 @@ End ctx_symm_tr.
 (* Main Lemmas and Theorems *)
 (****************************)
 
-Section symm_tr.
+#[global] Hint Resolve nil_a cons_a : hybrid.
 
-Hint Resolve nil_a cons_a : hybrid.
+Section symm_tr.
 
 Lemma aeq_symm :
   forall (i:nat) (T T':uexp) (Phi_a:list atm),
@@ -346,30 +336,31 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h T T' Phi_a cInv h1.
 inversion h1; subst; clear h1.
-inversion H0; subst; clear H0.
-(* lam case *)
-inversion H3; subst; clear H3.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (N x) (M x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h2.
-specialize H4 with (1:=h2).
-inversion H4; subst; clear H4.
-apply s_imp; auto.
-apply h; eauto with hybrid; try omega.
-(* app case *)
-inversion H3; subst; clear H3.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (aeq N1 M1)) (atom_ (aeq N2 M2)));
-  auto with hybrid.
-apply s_and; auto.
-apply h; try omega; auto.
-apply h; try omega; auto.
+- inversion H0; subst; clear H0.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    unfold seq_,atom_;
+      apply s_bc with
+          (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (N x) (M x))))));
+      auto with hybrid.
+    apply s_all; auto.
+    intros x h2.
+    specialize H4 with (1:=h2).
+    inversion H4; subst; clear H4.
+    apply s_imp; auto.
+    apply h; eauto with hybrid; try lia.
+  (* app case *)
+  + inversion H3; subst; clear H3.
+    unfold seq_,atom_;
+      apply s_bc with (Conj (atom_ (aeq N1 M1)) (atom_ (aeq N2 M2)));
+      auto with hybrid.
+    apply s_and; auto.
+    * apply h; try lia; auto.
+    * apply h; try lia; auto.
 (* context case *)
-inversion cInv; subst.
-specialize memb_symm_tr with (1:=cInv) (2:=H2); intro; subst; auto.
-apply s_init; eauto with hybrid.
+- inversion cInv; subst.
+  specialize memb_symm_tr with (1:=cInv) (2:=H2); intro; subst; auto.
+  apply s_init; eauto with hybrid.
 Qed.
 
 Lemma aeq_symm_cor : forall (T T':uexp),
@@ -400,55 +391,57 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h T R U Phi_a cInv h1 h2.
 inversion h1; subst; clear h1.
-inversion H0; subst; clear H0.
-(* lam case *)
-inversion H3; subst; clear H3.
-inversion h2; subst; clear h2.
-inversion H1; subst; clear H1.
-specialize abstr_lbind_simp with (1:=H7) (2:=H5) (3:=H0); intro h1.
-rewrite H.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (N0 x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h2.
-inversion H6; subst; clear H6.
-specialize H10 with (1:=h2).
-unfold ext_eq in h1; rewrite -> h1 in H10; auto; clear H0 H7 h1 M0.
-assert (hi:i1=i); try omega; subst; clear H.
-specialize H4 with (1:=h2).
-inversion H10; subst; clear H10.
-inversion H4; subst; clear H4.
-apply s_imp; auto.
-assert (hi:i0=i); try omega; subst; clear H.
-apply h with (N x); eauto with hybrid; try omega.
-(* lam case: context subcase *)
-specialize memb_symm_tr with (1:=cInv) (2:=H3); intro; subst.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (N x))))));
-  auto with hybrid.
-apply s_all; auto.
-(* app case *)
-inversion H3; subst; clear H3.
-inversion h2; subst; clear h2.
-inversion H1; subst; clear H1.
-inversion H3; subst; clear H3.
-assert (hi:i1=i); try omega; subst; clear H.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (aeq M1 N0)) (atom_ (aeq M2 N3)));
-  auto with hybrid.
-apply s_and; auto.
-apply h with N1; try omega; auto.
-apply h with N2; try omega; auto.
-(* app case: context subcase *)
-specialize memb_symm_tr with (1:=cInv) (2:=H2); intro; subst.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (aeq M1 N1)) (atom_ (aeq M2 N2)));
-  auto with hybrid.
-apply s_and; auto.
+- inversion H0; subst; clear H0.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    inversion h2; subst; clear h2.
+    * inversion H1; subst; clear H1.
+      specialize abstr_lbind_simp with (1:=H7) (2:=H5) (3:=H0); intro h1.
+      rewrite H.
+      unfold seq_,atom_;
+        apply s_bc with
+            (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (N0 x))))));
+        auto with hybrid.
+      apply s_all; auto.
+      intros x h2.
+      inversion H6; subst; clear H6.
+      specialize H10 with (1:=h2).
+      unfold ext_eq in h1; rewrite -> h1 in H10; auto; clear H0 H7 h1 M0.
+      assert (hi:i1=i); try lia; subst; clear H.
+      specialize H4 with (1:=h2).
+      inversion H10; subst; clear H10.
+      inversion H4; subst; clear H4.
+      apply s_imp; auto.
+      assert (hi:i0=i); try lia; subst; clear H.
+      apply h with (N x); eauto with hybrid; try lia.
+    (* lam case: context subcase *)
+    * specialize memb_symm_tr with (1:=cInv) (2:=H3); intro; subst.
+      unfold seq_,atom_;
+        apply s_bc with
+            (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M x) (N x))))));
+        auto with hybrid.
+      apply s_all; auto.
+  (* app case *)
+  + inversion H3; subst; clear H3.
+    inversion h2; subst; clear h2.
+    * inversion H1; subst; clear H1.
+      inversion H3; subst; clear H3.
+      assert (hi:i1=i); try lia; subst; clear H.
+      unfold seq_,atom_;
+        apply s_bc with (Conj (atom_ (aeq M1 N0)) (atom_ (aeq M2 N3)));
+        auto with hybrid.
+      apply s_and; auto.
+      -- apply h with N1; try lia; auto.
+      -- apply h with N2; try lia; auto.
+    (* app case: context subcase *)
+    * specialize memb_symm_tr with (1:=cInv) (2:=H2); intro; subst.
+      unfold seq_,atom_;
+        apply s_bc with (Conj (atom_ (aeq M1 N1)) (atom_ (aeq M2 N2)));
+        auto with hybrid.
+      apply s_and; auto.
 (* context case *)
-inversion cInv; subst.
-specialize memb_symm_tr with (1:=cInv) (2:=H2); intro; subst; auto.
+- inversion cInv; subst.
+  specialize memb_symm_tr with (1:=cInv) (2:=H2); intro; subst; auto.
 Qed.
 
 Lemma aeq_trans_cor : forall (T R U:uexp),
@@ -458,8 +451,8 @@ Proof.
 intros T R U [i h1] [j h2].
 generalize nil_a; intro h3.
 exists (i+j); apply aeq_trans with R; auto.
-apply seq_mono_cor with i; auto; try omega.
-apply seq_mono_cor with j; auto; try omega.
+- apply seq_mono_cor with i; auto; try lia.
+- apply seq_mono_cor with j; auto; try lia.
 Qed.
 
 End symm_tr.
@@ -487,25 +480,25 @@ exists j:nat, (i=j+2 /\
        seq_ j ((deq x x)::(term x)::Psi) (atom_ (deq (T x) (T' x)))).
 Proof.
 induction i; auto.
-intros Psi T T' H.
-generalize (H (Var 0) (proper_Var 0)); intro H1.
-inversion H1; clear H1; subst.
-replace (i+1) with (S i) in H0; try omega.
-generalize i; clear i IHi.
-induction i; auto.
-intros Psi T T' H.
-generalize (H (Var 0) (proper_Var 0)); intro H1.
-inversion H1; clear H1; subst.
-inversion H4; clear H4; subst.
-replace (i0+1+1) with (S (S i0)) in H0; try omega.
-intros Psi T T' H.
-exists i; split; try omega.
-intros x H0.
-generalize (H x H0); intro H1.
-inversion H1; clear H1; subst.
-inversion H5; clear H5; subst.
-assert (i1 = i); try omega.
-subst; auto.
+- intros Psi T T' H.
+  generalize (H (Var 0) (proper_Var 0)); intro H1.
+  inversion H1; clear H1; subst.
+  replace (i+1) with (S i) in H0; try lia.
+- generalize i; clear i IHi.
+  induction i; auto.
+  + intros Psi T T' H.
+    generalize (H (Var 0) (proper_Var 0)); intro H1.
+    inversion H1; clear H1; subst.
+    inversion H4; clear H4; subst.
+    replace (i0+1+1) with (S (S i0)) in H0; try lia.
+  + intros Psi T T' H.
+    exists i; split; try lia.
+    intros x H0.
+    generalize (H x H0); intro H1.
+    inversion H1; clear H1; subst.
+    inversion H5; clear H5; subst.
+    assert (i1 = i); try lia.
+    subst; auto.
 Qed.
 
 End de_inv.
@@ -531,10 +524,10 @@ Lemma memb_ceq : forall (Gamma:list atm) (T T':uexp),
 Proof.
 intros Gamma T T'; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | [h2 | h2]]].
-discriminate h2.
-injection h2; intros; subst; subst; simpl; auto.
-discriminate h2.
-simpl; right; auto with hybrid.
+- discriminate h2.
+- injection h2; intros; subst; subst; simpl; auto.
+- discriminate h2.
+- simpl; right; auto with hybrid.
 Qed.
 
 Lemma term_strengthen_weaken :
@@ -555,37 +548,38 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h T Phi Psi h1 h2.
 inversion h2; subst; clear h2.
-inversion H0; subst; clear H0.
-(* app case *)
-inversion H3; subst; clear H3.
-assert (hi:i<i+1+1); try omega.
-generalize h; intro h'.
-specialize h with (1:=hi) (2:=h1) (3:=H4).
-specialize h' with (1:=hi) (2:=h1) (3:=H5).
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (term M)) (atom_ (term N)));
-  auto with hybrid.
-apply s_and; auto.
-(* lam case *)
-inversion H3; subst; clear H3.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h5.
-generalize (H4 x h5); intro h6.
-inversion h6; subst; clear h6 H4.
-apply s_imp; auto.
-apply h with (term x::Phi); auto; try omega.
-(* proof of extended context inv *)
-intro T; generalize (h1 T); simpl; tauto.
+- inversion H0; subst; clear H0.
+  (* app case *)
+  + inversion H3; subst; clear H3.
+    assert (hi:i<i+1+1); try lia.
+    generalize h; intro h'.
+    specialize h with (1:=hi) (2:=h1) (3:=H4).
+    specialize h' with (1:=hi) (2:=h1) (3:=H5).
+    unfold seq_,atom_;
+      apply s_bc with (Conj (atom_ (term M)) (atom_ (term N)));
+      auto with hybrid.
+    apply s_and; auto.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    unfold seq_,atom_;
+      apply s_bc with
+          (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
+      auto with hybrid.
+    apply s_all; auto.
+    intros x h5.
+    generalize (H4 x h5); intro h6.
+    inversion h6; subst; clear h6 H4.
+    apply s_imp; auto.
+    apply h with (term x::Phi); auto; try lia.
+    (* proof of extended context inv *)
+    intro T; generalize (h1 T); simpl; tauto.
 (* context case *)
-destruct (h1 T) as [h2 h3].
-generalize (h2 H2); clear h1 h2 h3 H2.
-case Psi.
-simpl; tauto.
-intros a Phi h1.
-apply s_init; auto with hybrid.
+- destruct (h1 T) as [h2 h3].
+  generalize (h2 H2); clear h1 h2 h3 H2.
+  case Psi.
+  + simpl; tauto.
+  + intros a Phi h1.
+    apply s_init; auto with hybrid.
 Qed.
 
 Lemma d_str_da2a_aeq :
@@ -597,8 +591,8 @@ intros i T T' x Gamma h.
 apply aeq_strengthen_weaken with (term x::deq x x::aeq x x::Gamma); auto.
 clear h T T' i.
 intros T T'; simpl; split.
-intros [h1 | [h1 | [h1 | h1]]]; try discriminate h1; auto.
-intros [h1 | h1]; auto.
+- intros [h1 | [h1 | [h1 | h1]]]; try discriminate h1; auto.
+- intros [h1 | h1]; auto.
 Qed.
 
 End ctx_ceq.
@@ -623,11 +617,11 @@ Lemma rm_da2xa_lem_aeq :
   (In (aeq T T') (rm_da2xa Gamma) <-> In (aeq T T') Gamma).
 Proof.
 intros T T' Gamma; induction 1.
-simpl; tauto.
-split.
-simpl; tauto.
-simpl; intros [h1 | [h1 | h1]]; try tauto.
-discriminate h1.
+- simpl; tauto.
+- split.
+  + simpl; tauto.
+  + simpl; intros [h1 | [h1 | h1]]; try tauto.
+    discriminate h1.
 Qed.
 
 Lemma rm_da2xa_lem_term :
@@ -636,11 +630,11 @@ Lemma rm_da2xa_lem_term :
   (In (term T) Gamma <-> In (term T) (rm_da2xa Gamma)).
 Proof.
 intros T Gamma; induction 1.
-simpl; tauto.
-split.
-simpl; intros [h1 | [h1 | [h1 | h1]]]; try tauto.
-discriminate h1.
-simpl; tauto.
+- simpl; tauto.
+- split.
+  + simpl; intros [h1 | [h1 | [h1 | h1]]]; try tauto.
+    discriminate h1.
+  + simpl; tauto.
 Qed.
 
 Hint Resolve rm_da2xa_lem_aeq : hybrid.
@@ -655,8 +649,6 @@ intros i T T' Gamma h1 h2.
 apply aeq_strengthen_weaken with (rm_da2xa Gamma);
   eauto with hybrid.
 Qed.
-
-Hint Resolve nil_xa cons_xa : hybrid.
 
 (* context strengthening *)
 Lemma daG2xaG_strengthen : forall (Gamma:list atm),
@@ -710,10 +702,10 @@ Lemma rm_da2a_lem_aeq1 :
   (In (aeq T T') (rm_da2a Gamma) <-> In (aeq T T') Gamma).
 Proof.
 intros T T' Gamma; induction 1.
-simpl; tauto.
-split.
-simpl; tauto.
-simpl; intros [h1 | [h1 | [h1 | h1]]]; try tauto; discriminate h1.
+- simpl; tauto.
+- split.
+  + simpl; tauto.
+  + simpl; intros [h1 | [h1 | [h1 | h1]]]; try tauto; discriminate h1.
 Qed.
 
 Lemma rm_da2a_lem_aeq2 :
@@ -737,8 +729,6 @@ intros i T T' Gamma h1 h2.
 apply aeq_strengthen_weaken with (rm_da2a Gamma);
   eauto with hybrid.
 Qed.
-
-Hint Resolve nil_a cons_a : hybrid.
 
 (* context strengthening *)
 Lemma daG2aG_strengthen : forall (Gamma:list atm),
@@ -816,47 +806,48 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h M N Gamma gInv h1.
 inversion h1; subst; clear h1.
-inversion H0; subst; clear H0.
-(* lam case *)
-inversion H3; subst; clear H3.
-generalize (de_l_inv i Gamma M0 N0 H4); clear H4; intros [j [h1 h2]];
- subst.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M0 x) (N0 x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h1.
-apply seq_mono with (j+1); try omega.
-apply s_imp; auto.
-apply d_str_da2a_aeq; auto.
-apply h; eauto with hybrid; try omega.
-apply seq_thin_exch with (deq x x::term x::Gamma); eauto with hybrid.
-intro a; simpl; tauto.
-apply h2; auto.
-(* app case *)
-inversion H3; subst; clear H3.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (aeq M1 N1)) (atom_ (aeq M2 N2)));
-  auto with hybrid.
-apply s_and; auto.
-apply h; try omega; auto.
-apply h; try omega; auto.
-(* refl case *)
-apply seq_mono with i0; auto; try omega.
-apply refl_promote; auto.
-(* symm case *)
-apply seq_mono with i0; auto; try omega.
-apply symm_promote; auto.
-apply h; eauto with hybrid; try omega.
-(* trans case *)
-inversion H3; subst; clear H3.
-apply seq_mono with i; auto; try omega.
-apply tr_promote with M2; auto.
-apply h; eauto with hybrid; try omega.
-apply h; eauto with hybrid; try omega.
+- inversion H0; subst; clear H0.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    generalize (de_l_inv i Gamma M0 N0 H4); clear H4; intros [j [h1 h2]];
+      subst.
+    unfold seq_,atom_;
+      apply s_bc with
+          (All (fun x:uexp => (Imp (aeq x x) (atom_ (aeq (M0 x) (N0 x))))));
+      auto with hybrid.
+    apply s_all; auto.
+    intros x h1.
+    apply seq_mono with (j+1); try lia.
+    apply s_imp; auto.
+    apply d_str_da2a_aeq; auto.
+    apply h; eauto with hybrid; try lia.
+    apply seq_thin_exch with (deq x x::term x::Gamma); eauto with hybrid.
+    * intro a; simpl; tauto.
+    * apply h2; auto.
+  (* app case *)
+  + inversion H3; subst; clear H3.
+    unfold seq_,atom_;
+      apply s_bc with (Conj (atom_ (aeq M1 N1)) (atom_ (aeq M2 N2)));
+      auto with hybrid.
+    apply s_and; auto.
+    * apply h; try lia; auto.
+    * apply h; try lia; auto.
+  (* refl case *)
+  + apply seq_mono with i0; auto; try lia.
+    apply refl_promote; auto.
+  (* symm case *)
+  + apply seq_mono with i0; auto; try lia.
+    apply symm_promote; auto.
+    apply h; eauto with hybrid; try lia.
+  (* trans case *)
+  + inversion H3; subst; clear H3.
+    apply seq_mono with i; auto; try lia.
+    apply tr_promote with M2; auto.
+    * apply h; eauto with hybrid; try lia.
+    * apply h; eauto with hybrid; try lia.
 (* context case *)
-inversion gInv; subst.
-apply s_init; eauto with hybrid.
+- inversion gInv; subst.
+  apply s_init; eauto with hybrid.
   (* applies memb_ceq *)
 Qed.
 
@@ -892,17 +883,17 @@ exists j:nat, (i=j+1 /\
        seq_ j (aeq x x::Psi) (atom_ (aeq (T x) (T' x)))).
 Proof.
 induction i; auto.
-intros Psi T T' H.
-generalize (H (Var 0) (proper_Var 0)); intro H1.
-inversion H1; clear H1; subst.
-replace (i+1) with (S i) in H0; try omega.
-intros Psi T T' H.
-exists i; split; try omega.
-intros x H0.
-generalize (H x H0); intro H1.
-inversion H1; clear H1; subst.
-assert (i0 = i); try omega.
-subst; auto.
+- intros Psi T T' H.
+  generalize (H (Var 0) (proper_Var 0)); intro H1.
+  inversion H1; clear H1; subst.
+  replace (i+1) with (S i) in H0; try lia.
+- intros Psi T T' H.
+  exists i; split; try lia.
+  intros x H0.
+  generalize (H x H0); intro H1.
+  inversion H1; clear H1; subst.
+  assert (i0 = i); try lia.
+  subst; auto.
 Qed.
 
 End ae_inv.
@@ -929,12 +920,12 @@ intros n h1 T h2.
 inversion h2; clear h2; subst.
 inversion H0; clear H0; subst.
 (* app case *)
-inversion H3; clear H3; subst.
-apply proper_app; auto.
-apply h1 with i0; auto; try omega.
-apply h1 with i0; auto; try omega.
+- inversion H3; clear H3; subst.
+  apply proper_app; auto.
+  + apply h1 with i0; auto; try lia.
+  + apply h1 with i0; auto; try lia.
 (* lam case *)
-inversion H3; clear H3; subst.
+- inversion H3; clear H3; subst.
 apply proper_lam; auto.
 Qed.
 
@@ -955,28 +946,28 @@ intros n h1 T T' h2.
 inversion h2; clear h2; subst.
 inversion H0; clear H0; subst.
 (* lam case *)
-split; apply proper_lam; auto.
+- split; apply proper_lam; auto.
 (* app case *)
-inversion H3; clear H3; subst.
-generalize h1; generalize h1; intros h2 h3.
-assert (h4:i0<i0+1+1); try omega.
-specialize h2 with (1:=h4) (2:=H4); elim h2; clear h2; intros h2 h5.
-specialize h3 with (1:=h4) (2:=H5); elim h3; clear h3; intros h3 h6.
-split; apply proper_app; auto.
+- inversion H3; clear H3; subst.
+  generalize h1; generalize h1; intros h2 h3.
+  assert (h4:i0<i0+1+1); try lia.
+  specialize h2 with (1:=h4) (2:=H4); elim h2; clear h2; intros h2 h5.
+  specialize h3 with (1:=h4) (2:=H5); elim h3; clear h3; intros h3 h6.
+  split; apply proper_app; auto.
 (* refl case *)
-split; apply term_proper; unfold seq0,seq'_,seq'; auto.
-exists i; auto.
-exists i; auto.
+- split; apply term_proper; unfold seq0,seq'_,seq'; auto.
+  + exists i; auto.
+  + exists i; auto.
 (* symm case *)
-assert (h4:i<i+1); try omega.
-specialize h1 with (1:=h4) (2:=H3); elim h1; clear h1; intros h1 h5; auto.
+- assert (h4:i<i+1); try lia.
+  specialize h1 with (1:=h4) (2:=H3); elim h1; clear h1; intros h1 h5; auto.
 (* trans case *)
-inversion H3; clear H3; subst.
-generalize h1; generalize h1; intros h2 h3.
-assert (h4:i0<i0+1+1); try omega.
-specialize h2 with (1:=h4) (2:=H4); elim h2; clear h2; intros h2 h5.
-specialize h3 with (1:=h4) (2:=H5); elim h3; clear h3; intros h3 h6.
-split; auto.
+- inversion H3; clear H3; subst.
+  generalize h1; generalize h1; intros h2 h3.
+  assert (h4:i0<i0+1+1); try lia.
+  specialize h2 with (1:=h4) (2:=H4); elim h2; clear h2; intros h2 h5.
+  specialize h3 with (1:=h4) (2:=H5); elim h3; clear h3; intros h3 h6.
+  split; auto.
 Qed.
 
 Lemma aeq_proper : forall T T':uexp,
@@ -996,14 +987,14 @@ intros n h1 T T' h2.
 inversion h2; clear h2; subst.
 inversion H0; clear H0; subst.
 (* lam case *)
-split; apply proper_lam; auto.
+- split; apply proper_lam; auto.
 (* app case *)
-inversion H3; clear H3; subst.
-generalize h1; generalize h1; intros h2 h3.
-assert (h4:i0<i0+1+1); try omega.
-specialize h2 with (1:=h4) (2:=H4); elim h2; clear h2; intros h2 h5.
-specialize h3 with (1:=h4) (2:=H5); elim h3; clear h3; intros h3 h6.
-split; apply proper_app; auto.
+- inversion H3; clear H3; subst.
+  generalize h1; generalize h1; intros h2 h3.
+  assert (h4:i0<i0+1+1); try lia.
+  specialize h2 with (1:=h4) (2:=H4); elim h2; clear h2; intros h2 h5.
+  specialize h3 with (1:=h4) (2:=H5); elim h3; clear h3; intros h3 h6.
+  split; apply proper_app; auto.
 Qed.
 
 End proper_adeq.
@@ -1020,9 +1011,9 @@ Lemma memb_aeq_adeq1 : forall (Gamma:list atm) (T T':uexp),
 Proof.
 intros Gamma T T'; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
-discriminate h2.
-injection h2; intros; subst; subst; simpl; auto.
-simpl; right; auto with hybrid.
+- discriminate h2.
+- injection h2; intros; subst; subst; simpl; auto.
+- simpl; right; auto with hybrid.
 Qed.
 
 (* Membership lemma used in adequacy of aeq *)
@@ -1031,9 +1022,9 @@ Lemma memb_aeq_adeq2 : forall (Gamma:list atm) (T T':uexp),
 Proof.
 intros Gamma; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
-discriminate h2.
-injection h2; intros; subst; subst; simpl; auto.
-simpl; right; auto with hybrid.
+- discriminate h2.
+- injection h2; intros; subst; subst; simpl; auto.
+- simpl; right; auto with hybrid.
 Qed.
 
 Lemma d_str_xa2x_term :
@@ -1045,9 +1036,9 @@ intros i T x Gamma h.
 apply term_strengthen_weaken with (term x::aeq x x::Gamma); auto.
 clear h T i.
 intro T; simpl; split.
-intros [h1 | [h1 | h1]]; auto.
-discriminate h1.
-intros [h1 | h1]; auto.
+- intros [h1 | [h1 | h1]]; auto.
+  discriminate h1.
+- intros [h1 | h1]; auto.
 Qed.
 
 End ctx_aeq_adeq.
@@ -1056,9 +1047,9 @@ End ctx_aeq_adeq.
 (* aeq Adequacy *)
 (****************)
 
-Section aeq_adeq.
+#[global] Hint Resolve nil_xa cons_xa memb_aeq_adeq1 memb_aeq_adeq2 : hybrid.
 
-Hint Resolve nil_xa cons_xa memb_aeq_adeq1 memb_aeq_adeq2 : hybrid.
+Section aeq_adeq.
 
 Lemma aeq_term :
   forall (i:nat) (T T':uexp) (Gamma:list atm),
@@ -1078,54 +1069,56 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h T T' Gamma cInv h1.
 inversion h1; subst; clear h1.
-inversion H0; subst; clear H0.
-(* lam case *)
-inversion H3; subst; clear H3.
-generalize (ae_l_inv i Gamma M N H4); clear H4; intros [j [h1 h2]];
- subst.
-assert (h':forall x:uexp, proper x -> 
+- inversion H0; subst; clear H0.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    generalize (ae_l_inv i Gamma M N H4); clear H4; intros [j [h1 h2]];
+      subst.
+    assert (h':forall x:uexp, proper x -> 
         (seq_ j (term x::aeq x x::Gamma) (atom_ (term (M x))) /\
          seq_ j (term x::aeq x x::Gamma) (atom_ (term (N x))))).
-intros x h1.
-apply h; eauto with hybrid; try omega.
-apply seq_thin_exch with (aeq x x::Gamma); auto.
-intro a; simpl; tauto.
-apply h2; auto.
-split.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h5.
-apply s_imp; auto.
-specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
-apply d_str_xa2x_term; auto.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (term x) (atom_ (term (N x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h5.
-apply s_imp; auto.
-specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
-apply d_str_xa2x_term; auto.
-(* app case *)
-inversion H3; subst; clear H3.
-assert (hi:i<i+1+1); try omega.
-generalize h; intro h'.
-specialize h with (1:=hi) (2:=cInv) (3:=H4).
-specialize h' with (1:=hi) (2:=cInv) (3:=H5).
-elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
-split.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (term M1)) (atom_ (term M2)));
-  auto with hybrid.
-apply s_and; auto.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (term N1)) (atom_ (term N2)));
-  auto with hybrid.
-apply s_and; auto.
+    { intros x h1.
+      apply h; eauto with hybrid; try lia.
+      apply seq_thin_exch with (aeq x x::Gamma); auto.
+      { intro a; simpl; tauto. }
+      { apply h2; auto. }}
+    split.
+    * unfold seq_,atom_;
+        apply s_bc with
+            (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
+        auto with hybrid.
+      apply s_all; auto.
+      intros x h5.
+      apply s_imp; auto.
+      specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
+      apply d_str_xa2x_term; auto.
+    * unfold seq_,atom_;
+        apply s_bc with
+            (All (fun x:uexp => (Imp (term x) (atom_ (term (N x))))));
+        auto with hybrid.
+      apply s_all; auto.
+      intros x h5.
+      apply s_imp; auto.
+      specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
+      apply d_str_xa2x_term; auto.
+  (* app case *)
+  + inversion H3; subst; clear H3.
+    assert (hi:i<i+1+1); try lia.
+    generalize h; intro h'.
+    specialize h with (1:=hi) (2:=cInv) (3:=H4).
+    specialize h' with (1:=hi) (2:=cInv) (3:=H5).
+    elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
+    split.
+    * unfold seq_,atom_;
+        apply s_bc with (Conj (atom_ (term M1)) (atom_ (term M2)));
+        auto with hybrid.
+      apply s_and; auto.
+    * unfold seq_,atom_;
+        apply s_bc with (Conj (atom_ (term N1)) (atom_ (term N2)));
+        auto with hybrid.
+      apply s_and; auto.
 (* context case *)
-split; apply s_init; eauto with hybrid.
+- split; apply s_init; eauto with hybrid.
   (* applies memb_aeq_adeq1 and memb_aeq_adeq2 *)
 Qed.
 
@@ -1159,9 +1152,9 @@ Lemma memb_deq_adeq1 : forall (Gamma:list atm) (T T':uexp),
 Proof.
 intros Gamma T T'; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
-injection h2; intros; subst; subst; simpl; auto.
-discriminate h2.
-simpl; right; auto with hybrid.
+- injection h2; intros; subst; subst; simpl; auto.
+- discriminate h2.
+- simpl; right; auto with hybrid.
 Qed.
 
 (* Membership lemma used in adequacy of deq *)
@@ -1170,9 +1163,9 @@ Lemma memb_deq_adeq2 : forall (Gamma:list atm) (T T':uexp),
 Proof.
 intros Gamma; induction 1; try (simpl; tauto).
 intro h2; simpl in h2; destruct h2 as [h2 | [h2 | h2]].
-injection h2; intros; subst; subst; simpl; auto.
-discriminate h2.
-simpl; right; auto with hybrid.
+- injection h2; intros; subst; subst; simpl; auto.
+- discriminate h2.
+- simpl; right; auto with hybrid.
 Qed.
 
 (* used in adequacy of deq *)
@@ -1185,8 +1178,8 @@ intros i T x Gamma h.
 apply term_strengthen_weaken with (deq x x::term x::Gamma); auto.
 clear h T i.
 intro T; simpl; split.
-intros [h1 | [h1 | h1]]; try discriminate h1; auto.
-intros [h1 | h1]; auto.
+- intros [h1 | [h1 | h1]]; try discriminate h1; auto.
+- intros [h1 | h1]; auto.
 Qed.
 
 End ctx_deq_adeq.
@@ -1218,69 +1211,71 @@ intro H'.
 apply H'; clear H' i; auto.
 intros i h T T' Gamma cInv h1.
 inversion h1; subst; clear h1.
-inversion H0; subst; clear H0.
-(* lam case *)
-inversion H3; subst; clear H3.
-generalize (de_l_inv i Gamma M N H4); clear H4; intros [j [h1 h2]];
- subst.
-replace (j+2) with (j+1+1); try omega.
-assert (h':forall x:uexp, proper x -> 
+- inversion H0; subst; clear H0.
+  (* lam case *)
+  + inversion H3; subst; clear H3.
+    generalize (de_l_inv i Gamma M N H4); clear H4; intros [j [h1 h2]];
+      subst.
+    replace (j+2) with (j+1+1); try lia.
+    assert (h':forall x:uexp, proper x -> 
         (seq_ j (deq x x::term x::Gamma) (atom_ (term (M x))) /\
          seq_ j (deq x x::term x::Gamma) (atom_ (term (N x))))).
-intros x h1.
-apply h; eauto with hybrid; try omega.
-eauto with hybrid.
-split.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h5.
-apply s_imp; auto.
-apply seq_mono with j; auto; try omega.
-specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
-apply d_str_dx2x_term; auto.
-unfold seq_,atom_; apply s_bc with
-  (All (fun x:uexp => (Imp (term x) (atom_ (term (N x))))));
-  auto with hybrid.
-apply s_all; auto.
-intros x h5.
-apply s_imp; auto.
-apply seq_mono with j; auto; try omega.
-specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
-apply d_str_dx2x_term; auto.
-(* app case *)
-inversion H3; subst; clear H3.
-assert (hi:i<i+1+1); try omega.
-generalize h; intro h'.
-specialize h with (1:=hi) (2:=cInv) (3:=H4).
-specialize h' with (1:=hi) (2:=cInv) (3:=H5).
-elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
-split.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (term M1)) (atom_ (term M2)));
-  auto with hybrid.
-apply s_and; auto.
-unfold seq_,atom_;
-  apply s_bc with (Conj (atom_ (term N1)) (atom_ (term N2)));
-  auto with hybrid.
-apply s_and; auto.
-(* refl case *)
-split; apply seq_mono with i0; auto; try omega.
-(* symm case *)
-assert (hi:i0<i0+1); try omega.
-specialize h with (1:=hi) (2:=cInv) (3:=H3); destruct h as [h1 h2].
-split; apply seq_mono with i0; auto; try omega.
-(* trans case *)
-inversion H3; subst; clear H3.
-assert (hi:i<i+1+1); try omega.
-generalize h; intro h'.
-specialize h with (1:=hi) (2:=cInv) (3:=H4).
-specialize h' with (1:=hi) (2:=cInv) (3:=H5).
-elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
-split; apply seq_mono with i; auto; try omega.
+    { intros x h1.
+      apply h; eauto with hybrid; try lia. }
+    eauto with hybrid.
+    split.
+    * unfold seq_,atom_;
+        apply s_bc with
+            (All (fun x:uexp => (Imp (term x) (atom_ (term (M x))))));
+        auto with hybrid.
+      apply s_all; auto.
+      intros x h5.
+      apply s_imp; auto.
+      apply seq_mono with j; auto; try lia.
+      specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
+      apply d_str_dx2x_term; auto.
+    * unfold seq_,atom_;
+        apply s_bc with
+            (All (fun x:uexp => (Imp (term x) (atom_ (term (N x))))));
+        auto with hybrid.
+      apply s_all; auto.
+      intros x h5.
+      apply s_imp; auto.
+      apply seq_mono with j; auto; try lia.
+      specialize h' with (1:=h5); destruct h' as [h6 h7]; eauto with hybrid.
+      apply d_str_dx2x_term; auto.
+  (* app case *)
+  + inversion H3; subst; clear H3.
+    assert (hi:i<i+1+1); try lia.
+    generalize h; intro h'.
+    specialize h with (1:=hi) (2:=cInv) (3:=H4).
+    specialize h' with (1:=hi) (2:=cInv) (3:=H5).
+    elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
+    split.
+    * unfold seq_,atom_;
+        apply s_bc with (Conj (atom_ (term M1)) (atom_ (term M2)));
+        auto with hybrid.
+      apply s_and; auto.
+    * unfold seq_,atom_;
+        apply s_bc with (Conj (atom_ (term N1)) (atom_ (term N2)));
+        auto with hybrid.
+      apply s_and; auto.
+  (* refl case *)
+  + split; apply seq_mono with i0; auto; try lia.
+  (* symm case *)
+  + assert (hi:i0<i0+1); try lia.
+    specialize h with (1:=hi) (2:=cInv) (3:=H3); destruct h as [h1 h2].
+    split; apply seq_mono with i0; auto; try lia.
+  (* trans case *)
+  + inversion H3; subst; clear H3.
+    assert (hi:i<i+1+1); try lia.
+    generalize h; intro h'.
+    specialize h with (1:=hi) (2:=cInv) (3:=H4).
+    specialize h' with (1:=hi) (2:=cInv) (3:=H5).
+    elim h; intros h2 h3; elim h'; intros h4 h5; clear h h'.
+    split; apply seq_mono with i; auto; try lia.
 (* context case *)
-split; apply s_init; eauto with hybrid.
+- split; apply s_init; eauto with hybrid.
   (* applies memb_deq_adeq1 and memb_deq_adeq2 *)
 Qed.
 
